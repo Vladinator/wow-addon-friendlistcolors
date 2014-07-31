@@ -7,13 +7,10 @@ local L = setmetatable({}, {
 })
 ns.L = L
 
-L.OPT_DESC = "Remember that changes are saved instantaneously."
-L.OPT_FEATURES_TITLE = "Features"
-L.OPT_FEATURES_DESC = "Choose what features are enabled."
-L.OPT_FEATURE1_TITLE = "Feature 1 Title"
-L.OPT_FEATURE1_DESC = "Feature 1 Desc"
-L.OPT_FEATURE2_TITLE = "Feature 2 Title"
-L.OPT_FEATURE2_DESC = "Feature 2 Desc"
+L.OPT_DESC = "Customize and preview your friend list labels."
+L.OPT_FORMAT_TITLE = "Format"
+L.OPT_PREVIEW_ONLINE_TITLE = "Online preview"
+L.OPT_PREVIEW_OFFLINE_TITLE = "Offline preview"
 
 if locale == "deDE" then
 elseif locale == "esES" then

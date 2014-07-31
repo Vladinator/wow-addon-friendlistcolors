@@ -15,6 +15,7 @@ local FRIENDS_GRAY_COLOR = FRIENDS_GRAY_COLOR
 local FRIENDS_WOW_NAME_COLOR = FRIENDS_WOW_NAME_COLOR
 local GetFriendInfo = GetFriendInfo
 local GetQuestDifficultyColor = GetQuestDifficultyColor
+local GetTime = GetTime
 local ipairs = ipairs
 local LOCALIZED_CLASS_NAMES_FEMALE = LOCALIZED_CLASS_NAMES_FEMALE
 local LOCALIZED_CLASS_NAMES_MALE = LOCALIZED_CLASS_NAMES_MALE
@@ -26,12 +27,13 @@ local table_insert = table.insert
 local tonumber = tonumber
 local tostring = tostring
 local type = type
+local UnitLevel = UnitLevel
 local UNKNOWN = UNKNOWN
 
 local addonName, ns = ...
 
 local defaults = {
-	format = "{color=level}[isOnline?\"L\"][isOnline?level]{/color} {color=class}[aliasName|realName]{/color}"
+	format = "{color=level}[isOnline?\"L\"][isOnline?level]{/color} {color=class}[aliasName|realName]{/color}",
 }
 
 local META_MAP = setmetatable({
@@ -71,18 +73,32 @@ local META_MAP = setmetatable({
 	end
 })
 
+local CLASS_COLORS = {}
+
 ns.frame = CreateFrame("Frame")
 ns.frame:SetScript("OnEvent", function (self, event, ...) ns[event](ns, event, ...) end)
 ns.frame:RegisterEvent("ADDON_LOADED")
+ns.frame:RegisterEvent("PLAYER_LOGIN")
 
 function ns:ADDON_LOADED(event, name)
 	if name == addonName then
 		ns.frame:UnregisterEvent(event)
-		ns.ADDON_LOADED = nil
-		FriendListColorsDB = FriendListColorsDB or defaults
-		FriendListColorsDB = defaults -- DEBUG
-		ns:CreateOptions()
+		ns[event] = nil
+		FriendListColorsDB = type(FriendListColorsDB) == "table" and FriendListColorsDB or defaults
 		ns:OverrideAPI()
+		ns:CreateOptions()
+	end
+end
+
+function ns:PLAYER_LOGIN(event)
+	ns.frame:UnregisterEvent(event)
+	ns[event] = nil
+	local colors = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)
+	for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
+		CLASS_COLORS[v] = colors[k]
+	end
+	for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
+		CLASS_COLORS[v] = colors[k]
 	end
 end
 
@@ -117,6 +133,10 @@ function ns:CreateOptions()
 	end
 
 	local function CreateOption(container, meta)
+		if type(meta) ~= "table" then
+			meta = {label = " ", noUL = 1}
+		end
+
 		local group = Ace:Create("SimpleGroup")
 		group:SetFullWidth(true)
 		group:SetLayout("Flow")
@@ -172,10 +192,12 @@ function ns:CreateOptions()
 			group.label:SetFont(STANDARD_TEXT_FONT, 12, "")
 			group.label:SetText(meta.label)
 
-			group.option = meta.createOption(meta, group.icon, group.label)
-
 			group:AddChild(group.label)
-			group:AddChild(group.option)
+
+			if type(meta.createOption) == "function" then
+				group.option = meta.createOption(meta, group.icon, group.label)
+				group:AddChild(group.option)
+			end
 
 			--if meta.helpText then
 			--	group:AddChild(group.icon)
@@ -187,13 +209,27 @@ function ns:CreateOptions()
 			group.line:SetPoint("BOTTOMRIGHT", 0, -4)
 			group.line:SetTexture(1, 1, 1, .2)
 			group.frame.underline = group.line
+
+			if meta.noUL then
+				group.line:Hide()
+			end
 		end
 
 		container:AddChild(group)
 	end
 
-	local function OptionDefaults()
-		-- TODO
+	local function StoragePipes(text)
+		local count
+		repeat
+			text, count = text:gsub("%|%|", "%|")
+		until not count or count == 0
+		return text
+	end
+
+	local function DisplayPipes(text)
+		text = StoragePipes(text)
+		text = text:gsub("%|", "%|%|")
+		return text
 	end
 
 	-- create interface panel
@@ -202,7 +238,6 @@ function ns:CreateOptions()
 	ns.panel.name = addonName
 	ns.panel.title = CreatePanelText(ns.panel, addonName)
 	ns.panel.desc = CreatePanelText(ns.panel, ns.L.OPT_DESC, ns.panel.title)
-	ns.panel.default = OptionDefaults
 	InterfaceOptions_AddCategory(ns.panel)
 
 	-- create scrolling frame
@@ -223,41 +258,253 @@ function ns:CreateOptions()
 	ns.panel:HookScript("OnHide", function() group.frame:Hide() end)
 
 	-- create options
+	local formatEditBox
+	local formatPreviews = {}
+
 	CreateOption(scroll, {
-		title = ns.L.OPT_FEATURES_TITLE,
-		desc = ns.L.OPT_FEATURES_DESC,
-		noHR = true
+		label = ns.L.OPT_FORMAT_TITLE,
+		createOption = function(meta, icon, label)
+			local option = Ace:Create("MultiLineEditBox")
+			option:SetLabel("")
+			option:SetRelativeWidth(1)
+			option:SetNumLines(10)
+			formatEditBox = option
+			return option
+		end
+	})
+
+	do
+		local varList = ""
+		local temp = {}
+
+		for k, v in pairs(META_MAP) do
+			temp[v] = k
+		end
+		table.sort(temp)
+
+		if #temp > 0 then
+			for k, v in ipairs(temp) do
+				varList = varList .. v .. ", "
+			end
+			varList = varList:sub(1, -3)
+		else
+			varList = "..."
+		end
+
+		CreateOption(scroll, {
+			createOption = function(meta, icon, label)
+				local option = Ace:Create("Label")
+				option:SetFont(STANDARD_TEXT_FONT, 12, "")
+				option:SetRelativeWidth(1)
+				option:SetText("Variables: " .. varList)
+				return option
+			end
+		})
+	end
+
+	CreateOption(scroll)
+
+	CreateOption(scroll, {
+		label = ns.L.OPT_PREVIEW_ONLINE_TITLE
 	})
 
 	CreateOption(scroll, {
-		label = ns.L.OPT_FEATURE1_TITLE,
-		helpText = ns.L.OPT_FEATURE1_DESC,
 		createOption = function(meta, icon, label)
-			local option = Ace:Create("EditBox")
-			-- TODO
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {1, "RealIDName", "BattleTag", false, "CharacterName", 1, BNET_CLIENT_WOW, true, nil, false, false, nil, "This friend has a note.", true, 0, false, true, "RealmName", 1, "Alliance", "Night Elf", "Hunter", "GuildName", "ZoneName", UnitLevel("player") + 5, "ZoneName - RealmName", "", 1, "AliasName", "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
 			return option
 		end
 	})
 
 	CreateOption(scroll, {
-		label = ns.L.OPT_FEATURE2_TITLE,
-		helpText = ns.L.OPT_FEATURE2_DESC,
 		createOption = function(meta, icon, label)
-			local option = Ace:Create("EditBox")
-			-- TODO
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {1, nil, "BattleTag", true, "CharacterName", 1, BNET_CLIENT_WOW, true, nil, false, false, nil, "This friend has a note.", nil, 0, false, true, "RealmName", 1, "Horde", "Blood Elf", "Death Knight", "GuildName", "ZoneName", UnitLevel("player"), "ZoneName - RealmName", "", 1, nil, "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
 			return option
 		end
 	})
 
 	CreateOption(scroll, {
-		label = ns.L.OPT_FEATURE3_TITLE,
-		helpText = ns.L.OPT_FEATURE3_DESC,
 		createOption = function(meta, icon, label)
-			local option = Ace:Create("EditBox")
-			-- TODO
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {nil, nil, nil, nil, "CharacterName", 1, BNET_CLIENT_WOW, true, nil, false, false, nil, "This friend has a note.", nil, nil, false, true, "RealmName", 1, "Alliance", "Human", "Mage", "GuildName", "ZoneName", UnitLevel("player") - 5, "ZoneName - RealmName", "", 1, nil, "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
 			return option
 		end
 	})
+
+	CreateOption(scroll)
+
+	CreateOption(scroll, {
+		label = ns.L.OPT_PREVIEW_OFFLINE_TITLE
+	})
+
+	CreateOption(scroll, {
+		createOption = function(meta, icon, label)
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {1, "RealIDName", "BattleTag", false, "CharacterName", 1, nil, nil, nil, false, false, nil, "This friend has a note.", true, 0, false, true, "RealmName", 1, "Alliance", "Night Elf", "Hunter", "GuildName", "ZoneName", UnitLevel("player") + 5, "ZoneName - RealmName", "", 1, "AliasName", "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
+			return option
+		end
+	})
+
+	CreateOption(scroll, {
+		createOption = function(meta, icon, label)
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {1, nil, "BattleTag", true, "CharacterName", 1, nil, nil, nil, false, false, nil, "This friend has a note.", nil, 0, false, true, "RealmName", 1, "Horde", "Blood Elf", "Death Knight", "GuildName", "ZoneName", UnitLevel("player"), "ZoneName - RealmName", "", 1, nil, "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
+			return option
+		end
+	})
+
+	CreateOption(scroll, {
+		createOption = function(meta, icon, label)
+			local option = Ace:Create("Label")
+			option:SetFont(STANDARD_TEXT_FONT, 14, "")
+			option:SetRelativeWidth(1)
+			option.example = {nil, nil, nil, nil, "CharacterName", 1, nil, nil, nil, false, false, nil, "This friend has a note.", nil, nil, false, true, "RealmName", 1, "Alliance", "Human", "Mage", "GuildName", "ZoneName", UnitLevel("player") - 5, "ZoneName - RealmName", "", 1, nil, "RealName"}
+			function option:UpdateExample()
+				local format = (formatEditBox:GetText() or ""):gsub("%|%|", "%|")
+				local formattedString, r, g, b = ns.FormatName(option.example, format)
+				if not formattedString or formattedString:len() == 0 then
+					option:SetText(" ")
+				else
+					option:SetText(formattedString)
+				end
+				if r then
+					option:SetColor(r, g, b)
+				else
+					option:SetColor(1, 1, 1)
+				end
+			end
+			option:UpdateExample()
+			table.insert(formatPreviews, option)
+			return option
+		end
+	})
+
+	-- handle updating and saving
+	formatEditBox:SetCallback("OnTextChanged", function(self, event, text)
+		local replacement, count = (text or ""):gsub("[\r\n]", "")
+		-- remove new lines if any
+		if count and count > 0 then
+			local position = formatEditBox.frame.obj.editBox:GetUTF8CursorPosition()
+			formatEditBox:SetText(DisplayPipes(replacement):trim())
+			formatEditBox.frame.obj.editBox:SetCursorPosition(position - 1)
+			return
+		end
+		-- update the previews
+		for _, option in ipairs(formatPreviews) do
+			option:UpdateExample()
+		end
+	end)
+
+	formatEditBox:SetCallback("OnEnterPressed", function(self, event, text)
+		FriendListColorsDB.format = StoragePipes(text or ""):trim()
+		ns.panel.refresh()
+	end)
+
+	ns.panel.refresh = function()
+		formatEditBox:SetText(DisplayPipes(FriendListColorsDB.format))
+		-- update the previews
+		for _, option in ipairs(formatPreviews) do
+			option:UpdateExample()
+		end
+	end
+
+	group.frame:HookScript("OnShow", ns.panel.refresh)
+
+	ns.panel.default = function()
+		FriendListColorsDB = defaults
+		ns.panel.refresh()
+	end
 end
 
 function ns:OverrideAPI()
@@ -269,45 +516,18 @@ function ns:OverrideAPI()
 		"FriendsFramePendingScrollFrame_AdjustScroll",
 	}
 
-	local scrollPosition
-
 	local function GetClassColor(class)
-		local classKey
-		for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
-			if v == class then
-				classKey = k
-				break
-			end
-		end
-		if not classKey then
-			for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
-				if v == class then
-					classKey = k
-					break
-				end
-			end
-		end
-		if classKey then
-			local color = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[classKey]
-			if color then
-				return "|c" .. color.colorStr
-			end
+		local color = CLASS_COLORS[class]
+		if color then
+			return "|c" .. color.colorStr
 		end
 		return "|cffFFFFFF"
 	end
 
 	local function GetDifficulty(level)
-		level = tonumber(level or 0, 16) or 0
-		local t, r, g, b, hex
-		if level > 0 then
-			t = GetQuestDifficultyColor(level)
-			r, g, b = t.r, t.g, t.b
-		end
-		if not r then
-			r, g, b = 1, 1, 1
-		end
-		hex = format("%02X%02X%02X", floor(r*255), floor(g*255), floor(b*255))
-		return "|cff" .. hex, hex, r, g, b
+		local color = GetQuestDifficultyColor(tonumber(level or 0, 10) or 0)
+		local hex = format("%02X%02X%02X", floor(color.r * 255), floor(color.g * 255), floor(color.b * 255))
+		return "|cff" .. hex, hex, color.r, color.g, color.b
 	end
 
 	local function ExtractAlias(note)
@@ -332,8 +552,8 @@ function ns:OverrideAPI()
 		return text
 	end
 
-	local function FormatName(meta)
-		local format = FriendListColorsDB.format
+	local function FormatName(meta, overrideFormat)
+		local format = overrideFormat or FriendListColorsDB.format
 		local r, g, b
 
 		if meta[META_MAP.isOnline] then
@@ -353,6 +573,11 @@ function ns:OverrideAPI()
 				replace = GetClassColor(meta[META_MAP.class])
 			elseif value:match("[Ll][Ee][Vv][Ee][Ll]") then
 				replace = GetDifficulty(meta[META_MAP.level])
+			else
+				local r, g, b = value:match("([a-fA-F0-9][a-fA-F0-9])([a-fA-F0-9][a-fA-F0-9])([a-fA-F0-9][a-fA-F0-9])")
+				if r and g and b then
+					replace = "|cff" .. r .. g .. b
+				end
 			end
 			if replace then
 				format = format:gsub("%{[Cc][Oo][Ll][Oo][Rr]=" .. EscapePattern(value) .. "%}", EscapePattern(replace))
@@ -462,7 +687,7 @@ function ns:OverrideAPI()
 			end
 		end
 		local aliasName = ExtractAlias(note) or realName
-		local meta = {
+		local meta = { -- follows META_MAP ordering
 			bnetID, bnetName, battleTag, isBattleTag, toonName, toonID, client, isOnline, lastOnline, isAFK, isDND, broadcast, note, isRealID, broadcastTime, canSoR,
 			hasFocus, realmName, realmID, faction, race, class, guild, zone, level, game, status,
 			numToons, aliasName, realName}
@@ -473,7 +698,7 @@ function ns:OverrideAPI()
 		if r and g and b then
 			button.name:SetTextColor(r, g, b)
 		end
-		button.name.realName = realName
+		--button.name.realName = realName -- TODO: DEPRECATED?
 	end
 
 	local function UpdateFriendsScrollFrame()
@@ -499,6 +724,8 @@ function ns:OverrideAPI()
 		hooksecurefunc(v, UpdateFriendsScrollFrame)
 	end
 
+	local scrollPosition
+
 	FriendsFrameFriendsScrollFrameScrollBar:HookScript("OnValueChanged", function(self, position)
 		position = floor(position + .5)
 		if not scrollPosition or abs(scrollPosition - position) > 2 then
@@ -506,4 +733,6 @@ function ns:OverrideAPI()
 			UpdateFriendsScrollFrame()
 		end
 	end)
+
+	ns.FormatName = FormatName
 end

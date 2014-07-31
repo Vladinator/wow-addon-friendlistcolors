@@ -16,6 +16,8 @@ The curly brackets are used for coloring while the regular brackets are used for
 
 >{color=level}?{/color} - color the content by level difficulty
 
+>{color=RRGGBB}?{/color} - color the content using hex color
+
 >[toonName] - show character name
 
 >[toonName|realName] - show character name, if not available show real name
@@ -45,33 +47,33 @@ List of variables
 	* class - class color
 	* level - level difficulty color (red, orange, yellow, green, gray)
 * [?]
+	* aliasName - alias name assigned by player
+	* battleTag - BattleTag name
 	* bnetID - random assigned BNet ID
 	* bnetName - BNet name
-	* battleTag - BattleTag name
-	* isBattleTag - check if added as a BattleTag friend (not RealID)
-	* toonName - character name
-	* toonID - character ID
-	* client - game client (WoW, BNet, SC2, D3)
-	* isOnline - check if currently online
-	* lastOnline - last online timestamp
-	* isAFK - check if away
-	* isDND - check if do not disturb
 	* broadcast - broadcasted message
-	* note - note assigned by player
-	* isRealID - check if added as a RealID friend (not BattleTag)
 	* broadcastTime - broadcasted message timestamp
 	* canSoR - can Scroll of Ressurection (DEPRECATED?)
-	* hasFocus - check if user is logged on a character
-	* realmName - realm name
-	* realmID - realm ID
-	* faction - faction
-	* race - race
 	* class - class
-	* guild - guild
-	* zone - zone
-	* level - level
+	* client - game client (WoW, BNet, SC2, D3)
+	* faction - faction
 	* game - game client string (DEPRECATED?)
-	* status - friend status string (AFK or DND)
+	* guild - guild
+	* hasFocus - check if user is logged on a character
+	* isAFK - check if away
+	* isBattleTag - check if added as a BattleTag friend (not RealID)
+	* isDND - check if do not disturb
+	* isOnline - check if currently online
+	* isRealID - check if added as a RealID friend (not BattleTag)
+	* lastOnline - last online timestamp
+	* level - level
+	* note - note assigned by player
 	* numToons - number of characters online
-	* aliasName - alias name assigned by player
+	* race - race
+	* realmID - realm ID
+	* realmName - realm name
 	* realName - real name (regardless of alias, works for any type of friend)
+	* status - friend status string (AFK or DND)
+	* toonID - character ID
+	* toonName - character name
+	* zone - zone

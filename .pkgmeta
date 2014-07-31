@@ -1,4 +1,4 @@
-package-as: MiniLoot
+package-as: FriendListColors
 enable-nolib-creation: no
 tools-used:
 		- ace3

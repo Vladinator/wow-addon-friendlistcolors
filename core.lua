@@ -541,12 +541,16 @@ function ns:OverrideAPI()
 
 	local function EscapePattern(text)
 		if type(text) == "string" then
+			text = text:gsub("%%", "%%%%")
 			text = text:gsub("%|", "%%|")
 			text = text:gsub("%?", "%%?")
 			text = text:gsub("%.", "%%.")
+			text = text:gsub("%-", "%%-")
 			text = text:gsub("%_", "%%_")
 			text = text:gsub("%[", "%%[")
 			text = text:gsub("%]", "%%]")
+			text = text:gsub("%(", "%%(")
+			text = text:gsub("%)", "%%)")
 			text = text:gsub("%*", "%%*")
 		end
 		return text
@@ -625,9 +629,6 @@ function ns:OverrideAPI()
 					local elseVariables = {}
 					local inverseBoolean
 					for part in tag:gmatch("[^%?]+") do
-						if not part:match("^(%!?)([%w\"]+)$") then
-							break
-						end
 						inverseBoolean = part:match("^%!(.+)$")
 						if inverseBoolean then
 							elseVariables[1] = not meta[META_MAP[inverseBoolean]]

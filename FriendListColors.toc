@@ -2,6 +2,6 @@
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 7.0.0.160612
-## SavedVariables: FriendListColors2DB
+## Version: 7.0.0.160625
+## SavedVariables: FriendListColorsDB
 core.lua

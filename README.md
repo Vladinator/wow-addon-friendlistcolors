@@ -1,79 +1,81 @@
 FriendListColors
 ==========================
-Allows customization of how your friends appear. You can decide what text appears and what colors are used. There are literally endless possibilities!
+Tired of the old friend list? This addon does more than just coloring your friends by class. You can specify what kind of information is shown and how the text is colored. You may even use the note field to specify their alias and show that in the friend list - the possibilities are endless!
 
 Getting started
 --------------------------
-Once in-game simply open your menu, navigate to the "AddOns" tab on top and find the addon in the list.
+You can play around with the rules by opening your interface settings, going to the "AddOns" tab on top, and finding the addon in the list.
 
 Examples
 --------------------------
-The variables you can use are split into two types: curly brackets and regular brackets. {} and [] respectively.
+By default you will find the following pattern as standard:
 
-The curly brackets are used for coloring while the regular brackets are used for variables.
+    [if=level][color=level]L[=level][/color] [/if][color=class][=accountName|name][if=characterName] ([=characterName])[/if][/color]
+If you want to try out something else, try this one:
 
->{color=class}?{/color} - color the content by class
+    [if=level][color=level]L[=level][/color] [/if][color=class][=accountName|characterName|name][/color]
 
->{color=level}?{/color} - color the content by level difficulty
+These will probably not suit your needs. That's fine. Why not make your own?
 
->{color=RRGGBB}?{/color} - color the content using hex color
-
->[toonName] - show character name
-
->[toonName|realName] - show character name, if not available show real name
-
->[isBattleTag?bnetName] - if isBattleTag is true then show BNet name
-
->[!isBattleTag?realName] - if isBattleTag is false then show real name
-
->[isBattleTag?"Some text"] - you can insert text by adding quotes
-
->[!isBattleTag?"Some text"] - same as above
-
-For instance the default formatting pattern:
->{color=level}[isOnline?"L"][isOnline?level]{/color} {color=class}[aliasName|realName]{/color}
-
-This will be converted to the following text if the person is online:
->L100 Bob
-
-If Bob is offline then the text will become:
->Bob
-
-Where the "L100" will be in the level difficulty color compared to your own level, and "Bob" will be colored to what ever Bob is playing. Note that here Bob would be an alias we assigned, otherwise if Bob has no assigned alias we will fallback to the other variable, his realName. The realName is automatically assigned to his BNet, battle tag or character name - depending on what is available to us. In the event Bob is offline then the "L" won't be shown and neither will the level.
-
-List of variables
+Syntax
 --------------------------
-* {color=?}?{/color}
-	* class - class color
-	* level - level difficulty color (red, orange, yellow, green, gray)
-* [?]
-	* aliasName - alias name assigned by player
-	* battleTag - BattleTag name
-	* bnetID - random assigned BNet ID
-	* bnetName - BNet name
-	* broadcast - broadcasted message
-	* broadcastTime - broadcasted message timestamp
-	* canSoR - can Scroll of Ressurection (DEPRECATED?)
-	* class - class
-	* client - game client (WoW, BNet, SC2, D3)
-	* faction - faction
-	* game - game client string (DEPRECATED?)
-	* guild - guild
-	* hasFocus - check if user is logged on a character
-	* isAFK - check if away
-	* isBattleTag - check if added as a BattleTag friend (not RealID)
-	* isDND - check if do not disturb
-	* isOnline - check if currently online
-	* isRealID - check if added as a RealID friend (not BattleTag)
-	* lastOnline - last online timestamp
-	* level - level
-	* note - note assigned by player
-	* numToons - number of characters online
-	* race - race
-	* realmID - realm ID
-	* realmName - realm name
-	* realName - real name (regardless of alias, works for any type of friend)
-	* status - friend status string (AFK or DND)
-	* toonID - character ID
-	* toonName - character name
-	* zone - zone
+There are three types of data types. Output blocks, logic blocks and color blocks.
+
+You can make the addon output information:
+
+    [=characterName|accountName|name]
+The addon will try to show the character name, if it doesn't exist, the account name. These are Battle.net specific, so we add the character name from the World of Warcraft friend system, not RealID/BattleTag. This way we cover for both types of friends we can encounter.
+
+You can also make show specific output based on information:
+
+    [if=name]Friend[/if]
+The addon will check if the friend is a World of Warcraft friend, then show the text `Friend`. You can put anything you like inside the block itself.
+
+You can color the output, similar to how you specify the `[if]` blocks above, by using:
+
+    [color=level]Level [=level][/color]
+The addon will use the level difference and color the text `Level [=level]` appropriately. Note that since we also have `[=level]` present, it will change that into their actual character level. For the time being you can only color based on `level` or `class`.
+
+Variables
+--------------------------
+This is the complete list of variables available for you to use:
+
+RealID and BattleTag friends:
+* bnetIDAccount
+* accountName
+* battleTag
+* isBattleTag
+* characterName
+* bnetIDGameAccount
+* client
+* isOnline
+* lastOnline
+* isAFK
+* isDND
+* messageText
+* noteText
+* isRIDFriend
+* messageType
+* canSoR
+* isReferAFriend
+* canSummonFriend
+* hasFocus
+* realmName
+* realmID
+* faction
+* race
+* class
+* guild
+* zoneName
+* level
+* gameText
+
+World of Warcraft friends:
+* name
+* level
+* class
+* area
+* connected
+* status
+* notes
+* isReferAFriend

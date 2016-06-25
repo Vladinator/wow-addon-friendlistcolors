@@ -434,8 +434,12 @@ do
 	local varNamesWoW = ""
 
 	do
-		for i = 1, STRUCT_LENGTH[FRIENDS_BUTTON_TYPE_BNET] do
-			varNamesBNet = varNamesBNet .. "|cffFFFF00" .. STRUCT[FRIENDS_BUTTON_TYPE_BNET][i] .. "|r  "
+		for i = 1, STRUCT_LENGTH[FRIENDS_BUTTON_TYPE_BNET] + STRUCT_LENGTH.BNET_CHARACTER do
+			local var = STRUCT[FRIENDS_BUTTON_TYPE_BNET][i]
+
+			if var then
+				varNamesBNet = varNamesBNet .. "|cffFFFF00" .. var .. "|r  "
+			end
 		end
 
 		for i = 1, STRUCT_LENGTH[FRIENDS_BUTTON_TYPE_WOW] do

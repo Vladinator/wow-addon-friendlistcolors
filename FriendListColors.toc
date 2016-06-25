@@ -1,15 +1,7 @@
-﻿## Interface: 60000
+﻿## Interface: 70000
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 6.0.0.141019
-## DefaultState: enabled
-## SavedVariables: FriendListColorsDB
-
-libs\LibStub\LibStub.lua
-libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
-libs\AceGUI-3.0\AceGUI-3.0.xml
-libs\AceConfig-3.0\AceConfig-3.0.xml
-
-locale.lua
+## Version: 7.0.0.160612
+## SavedVariables: FriendListColors2DB
 core.lua

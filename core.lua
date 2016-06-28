@@ -360,6 +360,63 @@ function addon:InitAPI()
 
 		button.name.SetText = UpdateButtonName
 	end
+
+	--[=[
+	local function ChatEdit_UpdateHeader(editBox)
+		local type = editBox:GetAttribute("chatType")
+
+		-- sanity check
+		if type == "WHISPER" or type == "BN_WHISPER" then
+			local header = _G[editBox:GetName().."Header"]
+
+			if header then
+				-- the whisper target
+				local name = editBox:GetAttribute("tellTarget")
+
+				-- extract the alias or regular name based on tellTarget attribute
+				if type == "WHISPER" then
+					local temp = {GetFriendInfo(name)}
+
+					if temp[1] then
+						local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]
+
+						name = ParseNote(temp[struct["notes"]]) or temp[struct["name"]] or name -- use alias name, fallback to default name
+					end
+
+				elseif type == "BN_WHISPER" then
+					local presenceID = BNet_GetPresenceID(name)
+
+					if presenceID then
+						local temp = {BNGetFriendInfo(presenceID)}
+
+						if temp[1] then
+							local struct = STRUCT[FRIENDS_BUTTON_TYPE_BNET]
+
+							name = ParseNote(temp[struct["noteText"]]) or temp[struct["accountName"]] or name -- use alias name, fallback to default name
+						end
+					end
+				end
+
+				-- update the name
+				header:SetFormattedText(_G["CHAT_" .. type .. "_SEND"], name)
+
+				-- adjust the width
+				local headerSuffix = _G[editBox:GetName().."HeaderSuffix"]
+				local headerWidth = (header:GetRight() or 0) - (header:GetLeft() or 0)
+				local editBoxWidth = editBox:GetRight() - editBox:GetLeft()
+
+				if headerWidth > editBoxWidth / 2 then
+					header:SetWidth(editBoxWidth / 2)
+					headerSuffix:Show()
+				end
+
+				editBox:SetTextInsets(15 + header:GetWidth() + (headerSuffix:IsShown() and headerSuffix:GetWidth() or 0), 13, 0, 0)
+			end
+		end
+	end
+
+	hooksecurefunc("ChatEdit_UpdateHeader", ChatEdit_UpdateHeader)
+	--]=]
 end
 
 do

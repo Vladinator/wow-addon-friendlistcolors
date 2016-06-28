@@ -1,6 +1,2 @@
 package-as: FriendListColors
 enable-nolib-creation: no
-tools-used:
-		- ace3
-		- callbackhandler
-		- libstub

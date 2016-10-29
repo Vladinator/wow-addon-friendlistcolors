@@ -361,7 +361,7 @@ function addon:InitAPI()
 		button.name.SetText = UpdateButtonName
 	end
 
-	--[=[
+	-- [=[
 	local function ChatEdit_UpdateHeader(editBox)
 		local type = editBox:GetAttribute("chatType")
 
@@ -384,10 +384,10 @@ function addon:InitAPI()
 					end
 
 				elseif type == "BN_WHISPER" then
-					local presenceID = BNet_GetPresenceID(name)
+					local presenceID = GetAutoCompletePresenceID(name)
 
 					if presenceID then
-						local temp = {BNGetFriendInfo(presenceID)}
+						local temp = {BNGetFriendInfoByID(presenceID)}
 
 						if temp[1] then
 							local struct = STRUCT[FRIENDS_BUTTON_TYPE_BNET]

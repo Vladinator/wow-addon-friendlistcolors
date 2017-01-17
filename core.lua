@@ -361,6 +361,33 @@ function addon:InitAPI()
 		button.name.SetText = UpdateButtonName
 	end
 
+	local function GetAliasFromNote(type, name)
+		if type == "WHISPER" then
+			local temp = {GetFriendInfo(name)}
+
+			if temp[1] then
+				local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]
+
+				name = ParseNote(temp[struct["notes"]]) or temp[struct["name"]] or name -- use alias name, fallback to default name
+			end
+
+		elseif type == "BN_WHISPER" then
+			local presenceID = GetAutoCompletePresenceID(name)
+
+			if presenceID then
+				local temp = {BNGetFriendInfoByID(presenceID)}
+
+				if temp[1] then
+					local struct = STRUCT[FRIENDS_BUTTON_TYPE_BNET]
+
+					name = ParseNote(temp[struct["noteText"]]) or temp[struct["accountName"]] or name -- use alias name, fallback to default name
+				end
+			end
+		end
+
+		return name
+	end
+
 	-- [=[
 	local function ChatEdit_UpdateHeader(editBox)
 		local type = editBox:GetAttribute("chatType")
@@ -374,28 +401,7 @@ function addon:InitAPI()
 				local name = editBox:GetAttribute("tellTarget")
 
 				-- extract the alias or regular name based on tellTarget attribute
-				if type == "WHISPER" then
-					local temp = {GetFriendInfo(name)}
-
-					if temp[1] then
-						local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]
-
-						name = ParseNote(temp[struct["notes"]]) or temp[struct["name"]] or name -- use alias name, fallback to default name
-					end
-
-				elseif type == "BN_WHISPER" then
-					local presenceID = GetAutoCompletePresenceID(name)
-
-					if presenceID then
-						local temp = {BNGetFriendInfoByID(presenceID)}
-
-						if temp[1] then
-							local struct = STRUCT[FRIENDS_BUTTON_TYPE_BNET]
-
-							name = ParseNote(temp[struct["noteText"]]) or temp[struct["accountName"]] or name -- use alias name, fallback to default name
-						end
-					end
-				end
+				name = GetAliasFromNote(type, name) or name
 
 				-- update the name
 				header:SetFormattedText(_G["CHAT_" .. type .. "_SEND"], name)
@@ -416,6 +422,39 @@ function addon:InitAPI()
 	end
 
 	hooksecurefunc("ChatEdit_UpdateHeader", ChatEdit_UpdateHeader)
+	--]=]
+
+	--[=[
+	local function ChatFilter_AddMessage(self, event, text, name, ...)
+		if event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" then
+			name = GetAliasFromNote("WHISPER", name) or name
+			return false, text, name, ...
+		elseif event == "CHAT_MSG_BN_WHISPER" or event == "CHAT_MSG_BN_WHISPER_INFORM" then
+			name = GetAliasFromNote("BN_WHISPER", name) or name
+			return false, text, name, ...
+		end
+		return false
+	end
+
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", ChatFilter_AddMessage)
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", ChatFilter_AddMessage)
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", ChatFilter_AddMessage)
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", ChatFilter_AddMessage)
+	--]=]
+
+	--[=[
+	local function QuickJoin_OnShow(...)
+	end
+
+	local function QuickJoin_OnEnter(...)
+	end
+
+	for i = 1, #QuickJoinFrame.ScrollFrame.buttons do
+		local button = QuickJoinFrame.ScrollFrame.buttons[i]
+
+		button:HookScript("OnShow", QuickJoin_OnShow)
+		button:HookScript("OnEnter", QuickJoin_OnEnter)
+	end
 	--]=]
 end
 

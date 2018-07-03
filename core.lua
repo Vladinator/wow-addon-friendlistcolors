@@ -220,6 +220,19 @@ local function ParseColor(temp, field)
 		end
 	end
 
+	-- fallback rgb/hex color logic
+	if not out then
+		local r, g, b = field:match("^%s*(%d+)%s*,%s*(%d+)%s*,%s*(%d+)%s*$")
+		if r then
+			out = ColorRgbToHex({r = r/255, g = g/255, b = b/255})
+		else
+			local hex = field:match("^%s*([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])%s*$")
+			if hex then
+				out = hex
+			end
+		end
+	end
+
 	-- fallback color logic
 	if not out then
 		local offline = not temp.data[STRUCT[temp.type][temp.type == FRIENDS_BUTTON_TYPE_BNET and "isOnline" or "connected"]]

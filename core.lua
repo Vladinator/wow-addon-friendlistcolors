@@ -220,13 +220,21 @@ local function ParseColor(temp, field)
 		end
 	end
 
+	-- fallback class color logic
+	if not out then
+		out = ColorFromClass(field:upper())
+	end
+
 	-- fallback rgb/hex color logic
 	if not out then
 		local r, g, b = field:match("^%s*(%d+)%s*,%s*(%d+)%s*,%s*(%d+)%s*$")
+
 		if r then
 			out = ColorRgbToHex({r = r/255, g = g/255, b = b/255})
+
 		else
 			local hex = field:match("^%s*([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])%s*$")
+
 			if hex then
 				out = hex
 			end

@@ -384,7 +384,7 @@ function addon:InitAPI()
 
 	local function GetAliasFromNote(type, name)
 		if type == "WHISPER" then
-			local temp = {GetFriendInfo(name)}
+			local temp = {C_FriendList.GetFriendInfo(name)}
 
 			if temp[1] then
 				local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]

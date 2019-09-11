@@ -127,6 +127,33 @@ local config = {
 	-- format = "[if=level][color=level]L[=level][/color] [/if][color=class][=accountName|characterName|name][/color]",
 }
 
+local function GetFriendInfo(friend)
+	local info
+	if type(friend) == "number" then
+		info = C_FriendList.GetFriendInfoByIndex(friend)
+	elseif type(friend) == "string" then
+		info = C_FriendList.GetFriendInfo(friend)
+	end
+	if not info then
+		return
+	end
+	local chatFlag = ""
+	if info.dnd then
+		chatFlag = CHAT_FLAG_DND
+	elseif info.afk then
+		chatFlag = CHAT_FLAG_AFK
+	end
+	return info.name,
+		info.level,
+		info.className,
+		info.area,
+		info.connected,
+		chatFlag,
+		info.notes,
+		info.referAFriend,
+		info.guid
+end
+
 local function EscapePattern(text)
 	if type(text) == "string" then
 		text = text:gsub("%%", "%%%%")
@@ -384,7 +411,7 @@ function addon:InitAPI()
 
 	local function GetAliasFromNote(type, name)
 		if type == "WHISPER" then
-			local temp = {C_FriendList.GetFriendInfo(name)}
+			local temp = {GetFriendInfo(name)}
 
 			if temp[1] then
 				local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]

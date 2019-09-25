@@ -114,6 +114,12 @@ do
 	for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
 		CLASS_COLORS[v] = ColorRgbToHex(colors[k])
 	end
+
+	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+		CLASS_COLORS.Monk = "00FF96"
+		CLASS_COLORS.Paladin = "F58CBA"
+		CLASS_COLORS.Shaman = "0070DE"
+	end
 end
 
 local COLORS = {
@@ -391,13 +397,18 @@ function addon:InitAPI()
 		local buttonType, id = button.buttonType, button.id
 
 		if buttonType == FRIENDS_BUTTON_TYPE_BNET or buttonType == FRIENDS_BUTTON_TYPE_WOW then
+			if true then
+				--button.gameIcon:SetTexture("Interface\\Buttons\\ui-paidcharactercustomization-button")
+				--button.gameIcon:SetTexCoord(8/128, 55/128, 72/128, 119/128)
+			end
+
 			return SetText(self, ParseFormat(PackageFriend(buttonType, id), config.format))
 		end
 
 		return SetText(self, ...)
 	end
 
-	local friendButtons = FriendsFrameFriendsScrollFrame.buttons
+	local friendButtons = FriendsListFrameScrollFrame.buttons
 
 	for i = 1, #friendButtons do
 		local button = friendButtons[i]

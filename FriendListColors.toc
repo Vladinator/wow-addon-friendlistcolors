@@ -1,7 +1,7 @@
-﻿## Interface: 80200
+﻿## Interface: 80205
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 8.2.0.190908
+## Version: 8.2.5.190925
 ## SavedVariables: FriendListColorsDB
 core.lua

@@ -408,7 +408,8 @@ function addon:InitAPI()
 		return SetText(self, ...)
 	end
 
-	local friendButtons = FriendsListFrameScrollFrame.buttons
+	local scrollFrame = FriendsListFrameScrollFrame or FriendsFrameFriendsScrollFrame -- retail and classic support
+	local friendButtons = scrollFrame.buttons
 
 	for i = 1, #friendButtons do
 		local button = friendButtons[i]

@@ -4,4 +4,6 @@
 ## Author: Vladinator
 ## Version: 8.2.5.190926
 ## SavedVariables: FriendListColorsDB
+## X-Curse-Project-ID: 43444
+## X-WoWI-ID: 18256
 core.lua

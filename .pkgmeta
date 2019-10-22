@@ -1,2 +1,4 @@
 package-as: FriendListColors
 enable-nolib-creation: no
+ignore:
+  - .travis.yml

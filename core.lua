@@ -867,18 +867,20 @@ do
 			editbox.Middle:Hide()
 			editbox.Right:Hide()
 
-			editbox.Backdrop = CreateFrame("Frame", nil, editbox)
+			editbox.Backdrop = CreateFrame("Frame", nil, editbox, false and BackdropTemplateMixin and "BackdropTemplate") -- TODO: 9.0
 			editbox.Backdrop:SetPoint("TOPLEFT", editbox, "TOPLEFT", -8, 8)
 			editbox.Backdrop:SetPoint("BOTTOMRIGHT", editbox, "BOTTOMRIGHT", 4, -10)
 
-			editbox.Backdrop:SetBackdrop({
-				bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-				tile = true, tileSize = 16, edgeSize = 16,
-				insets = { left = 4, right = 4, top = 4, bottom = 4 }
-			})
+			if editbox.Backdrop.SetBackdrop then
+				editbox.Backdrop:SetBackdrop({
+					bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+					edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+					tile = true, tileSize = 16, edgeSize = 16,
+					insets = { left = 4, right = 4, top = 4, bottom = 4 }
+				})
 
-			editbox.Backdrop:SetBackdropColor(0, 0, 0, 1)
+				editbox.Backdrop:SetBackdropColor(0, 0, 0, 1)
+			end
 
 			editbox.Backdrop:SetFrameLevel(5)
 			editbox:SetFrameLevel(10)

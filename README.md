@@ -44,6 +44,7 @@ RealID and BattleTag friends:
 * bnetIDAccount
 * accountName
 * battleTag
+* battleTagName
 * isBattleTag
 * characterName
 * bnetIDGameAccount
@@ -73,6 +74,7 @@ RealID and BattleTag friends:
 World of Warcraft friends:
 * name
 * level
+* race
 * class
 * area
 * connected

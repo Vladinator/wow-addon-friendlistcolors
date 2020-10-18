@@ -3,15 +3,35 @@ local addonName, ns = ...
 local BNGetFriendInfo, BNGetFriendInfoByID, BNGetFriendGameAccountInfo, BNGetGameAccountInfo, BNGetGameAccountInfoByGUID, BNGetNumFriendGameAccounts
 do
 	local function getDeprecatedAccountInfo(accountInfo)
-		if accountInfo then
-			local wowProjectID = accountInfo.gameAccountInfo.wowProjectID or 0
-			local clientProgram = accountInfo.gameAccountInfo.clientProgram ~= "" and accountInfo.gameAccountInfo.clientProgram or nil
-			return 
-				accountInfo.bnetAccountID, accountInfo.accountName, accountInfo.battleTag, accountInfo.isBattleTagFriend,
-				accountInfo.gameAccountInfo.characterName, accountInfo.gameAccountInfo.gameAccountID, clientProgram,
-				accountInfo.gameAccountInfo.isOnline, accountInfo.lastOnlineTime, accountInfo.isAFK, accountInfo.isDND, accountInfo.customMessage, accountInfo.note, accountInfo.isFriend,
-				accountInfo.customMessageTime, wowProjectID, accountInfo.rafLinkType == Enum.RafLinkType.Recruit, accountInfo.gameAccountInfo.canSummon, accountInfo.isFavorite, accountInfo.gameAccountInfo.isWowMobile
+		if not accountInfo then
+			return
 		end
+		local battleTag = accountInfo.battleTag
+		local battleTagName = battleTag and battleTag ~= "" and strsplit("#", battleTag, 2)
+		local wowProjectID = accountInfo.gameAccountInfo.wowProjectID or 0
+		local clientProgram = accountInfo.gameAccountInfo.clientProgram ~= "" and accountInfo.gameAccountInfo.clientProgram or nil
+		return 
+			accountInfo.bnetAccountID, -- 1
+			accountInfo.accountName, -- 2
+			battleTag, -- 3
+			accountInfo.isBattleTagFriend, -- 4
+			accountInfo.gameAccountInfo.characterName, -- 5
+			accountInfo.gameAccountInfo.gameAccountID, -- 6
+			clientProgram, -- 7
+			accountInfo.gameAccountInfo.isOnline, -- 8
+			accountInfo.lastOnlineTime, -- 9
+			accountInfo.isAFK, -- 10
+			accountInfo.isDND, -- 11
+			accountInfo.customMessage, -- 12
+			accountInfo.note, -- 13
+			accountInfo.isFriend, -- 14
+			accountInfo.customMessageTime, -- 15
+			wowProjectID, -- 16
+			accountInfo.rafLinkType == Enum.RafLinkType.Recruit, -- 17
+			accountInfo.gameAccountInfo.canSummon, -- 18
+			accountInfo.isFavorite, -- 19
+			accountInfo.gameAccountInfo.isWowMobile, -- 20
+			battleTagName -- 21 (custom, for streaming purposes)
 	end
 	BNGetFriendInfo = function(friendIndex)
 		local accountInfo = C_BattleNet.GetFriendAccountInfo(friendIndex)
@@ -22,26 +42,44 @@ do
 		return getDeprecatedAccountInfo(accountInfo)
 	end
 	local function getDeprecatedGameAccountInfo(gameAccountInfo, accountInfo)
-		if gameAccountInfo and accountInfo then
-			local wowProjectID = gameAccountInfo.wowProjectID or 0
-			local characterName = gameAccountInfo.characterName or ""
-			local realmName = gameAccountInfo.realmName or ""
-			local realmID = gameAccountInfo.realmID or 0
-			local factionName = gameAccountInfo.factionName or ""
-			local raceName = gameAccountInfo.raceName or ""
-			local className = gameAccountInfo.className or ""
-			local areaName = gameAccountInfo.areaName or ""
-			local characterLevel = gameAccountInfo.characterLevel or ""
-			local richPresence = gameAccountInfo.richPresence or ""
-			local gameAccountID = gameAccountInfo.gameAccountID or 0
-			local playerGuid = gameAccountInfo.playerGuid or 0
-			return 
-				gameAccountInfo.hasFocus, characterName, gameAccountInfo.clientProgram,
-				realmName, realmID, factionName, raceName, className, "", areaName, characterLevel,
-				richPresence, accountInfo.customMessage, accountInfo.customMessageTime,
-				gameAccountInfo.isOnline, gameAccountID, accountInfo.bnetAccountID, gameAccountInfo.isGameAFK, gameAccountInfo.isGameBusy,
-				playerGuid, wowProjectID, gameAccountInfo.isWowMobile
+		if not gameAccountInfo or not accountInfo then
+			return
 		end
+		local wowProjectID = gameAccountInfo.wowProjectID or 0
+		local characterName = gameAccountInfo.characterName or ""
+		local realmName = gameAccountInfo.realmName or ""
+		local realmID = gameAccountInfo.realmID or 0
+		local factionName = gameAccountInfo.factionName or ""
+		local raceName = gameAccountInfo.raceName or ""
+		local className = gameAccountInfo.className or ""
+		local areaName = gameAccountInfo.areaName or ""
+		local characterLevel = gameAccountInfo.characterLevel or ""
+		local richPresence = gameAccountInfo.richPresence or ""
+		local gameAccountID = gameAccountInfo.gameAccountID or 0
+		local playerGuid = gameAccountInfo.playerGuid or 0
+		return 
+			gameAccountInfo.hasFocus, -- 1
+			characterName, -- 2
+			gameAccountInfo.clientProgram, -- 3
+			realmName, -- 4
+			realmID, -- 5
+			factionName, -- 6
+			raceName, -- 7
+			className, -- 8
+			"", -- 9
+			areaName, -- 10
+			characterLevel, -- 11
+			richPresence, -- 12
+			accountInfo.customMessage, -- 13
+			accountInfo.customMessageTime, -- 14
+			gameAccountInfo.isOnline, -- 15
+			gameAccountID, -- 16
+			accountInfo.bnetAccountID, -- 17
+			gameAccountInfo.isGameAFK, -- 18
+			gameAccountInfo.isGameBusy, -- 19
+			playerGuid, -- 20
+			wowProjectID, -- 21
+			gameAccountInfo.isWowMobile -- 22
 	end
 	BNGetFriendGameAccountInfo = function(friendIndex, accountIndex)
 		local gameAccountInfo = C_BattleNet.GetFriendGameAccountInfo(friendIndex, accountIndex)
@@ -83,26 +121,35 @@ local STRUCT = {
 		["noteText"] = 13,
 		["isRIDFriend"] = 14,
 		["messageTime"] = 15,
-		["canSoR"] = 16,
-		["isReferAFriend"] = 17,
+		["wowProjectID"] = 16,
+		["canSoR"] = 17, -- isReferAFriend
 		["canSummonFriend"] = 18,
+		["isFavorite"] = 19,
+		["isMobile"] = 20,
+		["battleTagName"] = 21, -- custom
 		-- character fields extension
-		["hasFocus"] = 19,
-		-- ["characterName"] = 20,
-		-- ["client"] = 21,
-		["realmName"] = 22,
-		["realmID"] = 23,
-		["faction"] = 24,
-		["race"] = 25,
-		["class"] = 26,
-		["guild"] = 27,
-		["zoneName"] = 28,
-		["level"] = 29,
-		["gameText"] = 30,
-		["broadcastText"] = 31,
-		["broadcastTime"] = 32,
-		-- ["canSoR"] = 33,
-		-- ["bnetIDGameAccount"] = 34,
+		["hasFocus"] = 22,
+		-- ["characterName"] = 23,
+		-- ["client"] = 24,
+		["realmName"] = 25,
+		["realmID"] = 26,
+		["faction"] = 27,
+		["race"] = 28,
+		["class"] = 29,
+		["guild"] = 30,
+		["zoneName"] = 31,
+		["level"] = 32,
+		["gameText"] = 33,
+		["broadcastText"] = 34,
+		["broadcastTime"] = 35,
+		-- ["isOnline"] = 36,
+		-- ["bnetIDGameAccount"] = 37,
+		-- ["bnetIDAccount"] = 38,
+		-- ["isAFK"] = 39,
+		-- ["isDND"] = 40,
+		["guid"] = 41,
+		-- ["wowProjectID"] = 42,
+		-- ["isMobile"] = 43,
 	},
 	[FRIENDS_BUTTON_TYPE_WOW] = {
 		["name"] = 1,
@@ -112,7 +159,9 @@ local STRUCT = {
 		["connected"] = 5,
 		["status"] = 6,
 		["notes"] = 7,
-		["isReferAFriend"] = 8
+		["isReferAFriend"] = 8,
+		["guid"] = 9,
+		["race"] = 10, -- custom
 	}
 }
 
@@ -129,7 +178,7 @@ do
 		return i
 	end
 
-	STRUCT_LENGTH.BNET_CHARACTER = 12 -- 16 -- manually updated to reflect the amount of character fields specified above
+	STRUCT_LENGTH.BNET_CHARACTER = 13 -- 23 -- manually updated to reflect the amount of character fields specified above
 	STRUCT_LENGTH[FRIENDS_BUTTON_TYPE_BNET] = CountItems(STRUCT[FRIENDS_BUTTON_TYPE_BNET]) - STRUCT_LENGTH.BNET_CHARACTER
 	STRUCT_LENGTH[FRIENDS_BUTTON_TYPE_WOW] = CountItems(STRUCT[FRIENDS_BUTTON_TYPE_WOW])
 end
@@ -212,15 +261,18 @@ local function GetFriendInfo(friend)
 	elseif info.afk then
 		chatFlag = CHAT_FLAG_AFK
 	end
-	return info.name,
-		info.level,
-		info.className,
-		info.area,
-		info.connected,
-		chatFlag,
-		info.notes,
-		info.referAFriend,
-		info.guid
+	local raceName = info.guid and select(3, GetPlayerInfoByGUID(info.guid))
+	return 
+		info.name, -- 1
+		info.level, -- 2
+		info.className, -- 3
+		info.area, -- 4
+		info.connected, -- 5
+		chatFlag, -- 6
+		info.notes, -- 7
+		info.referAFriend, -- 8
+		info.guid, -- 9
+		raceName -- 10 (custom)
 end
 
 local function EscapePattern(text)
@@ -355,7 +407,7 @@ end
 
 local ParseFormat -- used in ParseLogic
 
-local function ParseLogic(temp, raw, content)
+local function ParseLogic(temp, raw, content, reverseLogic)
 	local out
 
 	local fields = {("|"):split(raw)}
@@ -406,6 +458,14 @@ local function ParseLogic(temp, raw, content)
 
 	-- got content? use the output to determine if we show the content or not
 	if content and content ~= "" then
+		if reverseLogic then
+			if out then
+				out = nil
+			else
+				out = content
+			end
+		end
+
 		if out then
 			return ParseFormat(temp, content)
 		end
@@ -440,6 +500,11 @@ function ParseFormat(temp, raw)
 	-- [if=X]Y[/if]
 	for matched, logic, content in raw:gmatch("(%[[iI][fF]=(.-)%](.-)%[%/[iI][fF]%])") do
 		raw = SafeReplace(raw, EscapePattern(matched), ParseLogic(temp, logic, content))
+	end
+
+	-- [if~=X]Y[/if]
+	for matched, logic, content in raw:gmatch("(%[[iI][fF][%~%!]=(.-)%](.-)%[%/[iI][fF]%])") do
+		raw = SafeReplace(raw, EscapePattern(matched), ParseLogic(temp, logic, content, true))
 	end
 
 	return raw
@@ -511,7 +576,7 @@ function addon:InitAPI()
 		return name
 	end
 
-	-- [=[
+	-- [=[ sets the name of the edit box "sending to"
 	local function ChatEdit_UpdateHeader(editBox)
 		local type = editBox:GetAttribute("chatType")
 
@@ -547,7 +612,7 @@ function addon:InitAPI()
 	hooksecurefunc("ChatEdit_UpdateHeader", ChatEdit_UpdateHeader)
 	--]=]
 
-	--[=[
+	--[=[ sets the name of the person in the chat to match their alias (breaks sending messages the UI tries to send to the alias and fails...)
 	local function ChatFilter_AddMessage(self, event, text, name, ...)
 		if event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" then
 			name = GetAliasFromNote("WHISPER", name) or name
@@ -588,53 +653,68 @@ do
 	-- TODO: requires manual updating to match the STRUCT defined on top
 	local function ExampleFriend(format, isBNet)
 		local temp = {}
+		local maxLevel = GetMaxLevelForExpansionLevel(GetExpansionLevel())
 
 		if isBNet then
 			temp.type = FRIENDS_BUTTON_TYPE_BNET
 			temp.data = {
-				1234,
-				"Ola Nordman",
-				"Ola#1234",
-				false,
-				"Facemelter",
-				1,
-				"WoW",
-				true,
-				time(),
-				false,
-				false,
-				"",
-				"",
-				false,
-				0,
-				false,
-				false,
-				false,
-				true,
-				"Lightning's Blade",
-				1234,
-				"Alliance",
-				"Human",
-				"Mage",
-				"",
-				"The Zone",
-				110,
-				"WoW",
-				"",
-				0
+				1234, -- 1 bnetIDAccount
+				"Ola Nordman", -- 2 accountName
+				"Ola#1234", -- 3 battleTag
+				false, -- 4 isBattleTag
+				"Facemelter", -- 5 characterName
+				1, -- 6 bnetIDGameAccount
+				"WoW", -- 7 client
+				true, -- 8 isOnline
+				time(), -- 9 lastOnline
+				false, -- 10 isAFK
+				false, -- 11 isDND
+				"", -- 12 messageText
+				"", -- 13 noteText
+				false, -- 14 isRIDFriend
+				0, -- 15 messageTime
+				1, -- 16 wowProjectID
+				false, -- 17 canSoR
+				false, -- 18 canSummonFriend
+				false, -- 19 isFavorite
+				false, -- 20 isMobile
+				"Ola", -- 21 battleTagName
+				true, -- 22 hasFocus
+				nil, -- 23 characterName
+				nil, -- 24 client
+				"Lightning's Blade", -- 25 realmName
+				1234, -- 26 realmID
+				"Alliance", -- 27 faction
+				"Human", -- 28 race
+				"Mage", -- 29 class
+				"", -- 30 guild
+				"The Zone", -- 31 zoneName
+				maxLevel, -- 32 level
+				"WoW", -- 33 gameText
+				"", -- 34 broadcastText
+				0, -- 35 broadcastTime
+				nil, -- 36 isOnline
+				nil, -- 37 bnetIDGameAccount
+				nil, -- 38 bnetIDAccount
+				nil, -- 39 isAFK
+				nil, -- 40 isDND
+				nil, -- 41 guid
+				nil, -- 42 wowProjectID
+				nil, -- 43 isMobile
 			}
 
 		else
 			temp.type = FRIENDS_BUTTON_TYPE_WOW
 			temp.data = {
-				"Facemelter",
-				110,
-				"Mage",
-				"The Zone",
-				true,
-				"",
-				"",
-				false
+				"Facemelter", -- 1 name
+				maxLevel, -- 2 level
+				"Mage", -- 3 class
+				"The Zone", -- 4 area
+				true, -- 5 connected
+				"", -- 6 status
+				"", -- 7 notes
+				false, -- 8 isReferAFriend
+				-- 9 guid
 			}
 		end
 

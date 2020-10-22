@@ -341,13 +341,11 @@ local function ColorFromClass(class)
 end
 
 local function ParseNote(note)
-	if type(note) == "string" then
-		local alias = note:match("%^(.-)%$")
-
-		if not alias or alias == "" then
-			alias = nil
-		end
-
+	if type(note) ~= "string" then
+		return
+	end
+	local alias = note:match("%^(.-)%$")
+	if alias and alias ~= "" then
 		return alias
 	end
 end
@@ -550,14 +548,25 @@ function addon:InitAPI()
 		button.name.SetText = UpdateButtonName
 	end
 
-	local function GetAliasFromNote(type, name)
+	local function SafeReplaceName(oldName, newName, lineID, bnetIDAccount)
+		if bnetIDAccount then
+			if lineID then return oldName end -- temporary disable custom names when handling chat messages from bnet friends
+			return GetBNPlayerLink(newName, newName, bnetIDAccount, lineID) -- TODO: not working well when used to replace the real bnet name with an alias in the chat the name gets mangled something fierce
+		end
+		return newName
+	end
+
+	local function GetAliasFromNote(type, name, lineID)
 		if type == "WHISPER" then
 			local temp = {GetFriendInfo(name)}
 
 			if temp[1] then
 				local struct = STRUCT[FRIENDS_BUTTON_TYPE_WOW]
 
-				name = ParseNote(temp[struct["notes"]]) or temp[struct["name"]] or name -- use alias name, fallback to default name
+				local newName = ParseNote(temp[struct["notes"]])
+				if newName then
+					return SafeReplaceName(name, newName, lineID)
+				end
 			end
 
 		elseif type == "BN_WHISPER" then
@@ -569,7 +578,10 @@ function addon:InitAPI()
 				if temp[1] then
 					local struct = STRUCT[FRIENDS_BUTTON_TYPE_BNET]
 
-					name = ParseNote(temp[struct["noteText"]]) or temp[struct["accountName"]] or name -- use alias name, fallback to default name
+					local newName = ParseNote(temp[struct["noteText"]])
+					if newName then
+						return SafeReplaceName(name, newName, lineID, presenceID)
+					end
 				end
 			end
 		end
@@ -577,72 +589,92 @@ function addon:InitAPI()
 		return name
 	end
 
-	-- [=[ sets the name of the edit box "sending to"
-	local function ChatEdit_UpdateHeader(editBox)
-		local type = editBox:GetAttribute("chatType")
+	-- updates the chat edit header
+	do
+		local function ChatEdit_UpdateHeader(editBox)
+			local type = editBox:GetAttribute("chatType")
 
-		-- sanity check
-		if type == "WHISPER" or type == "BN_WHISPER" then
-			local header = _G[editBox:GetName().."Header"]
+			-- sanity check
+			if type == "WHISPER" or type == "BN_WHISPER" then
+				local header = _G[editBox:GetName().."Header"]
 
-			if header then
-				-- the whisper target
-				local name = editBox:GetAttribute("tellTarget")
+				if header then
+					-- the whisper target
+					local name = editBox:GetAttribute("tellTarget")
 
-				-- extract the alias or regular name based on tellTarget attribute
-				name = GetAliasFromNote(type, name) or name
+					-- extract the alias or regular name based on tellTarget attribute
+					name = GetAliasFromNote(type, name)
 
-				-- update the name
-				header:SetFormattedText(_G["CHAT_" .. type .. "_SEND"], name)
+					-- update the name
+					header:SetFormattedText(_G["CHAT_" .. type .. "_SEND"], name)
 
-				-- adjust the width
-				local headerSuffix = _G[editBox:GetName().."HeaderSuffix"]
-				local headerWidth = (header:GetRight() or 0) - (header:GetLeft() or 0)
-				local editBoxWidth = editBox:GetRight() - editBox:GetLeft()
+					-- adjust the width
+					local headerSuffix = _G[editBox:GetName().."HeaderSuffix"]
+					local headerWidth = (header:GetRight() or 0) - (header:GetLeft() or 0)
+					local editBoxWidth = editBox:GetRight() - editBox:GetLeft()
 
-				if headerWidth > editBoxWidth / 2 then
-					header:SetWidth(editBoxWidth / 2)
-					headerSuffix:Show()
+					if headerWidth > editBoxWidth / 2 then
+						header:SetWidth(editBoxWidth / 2)
+						headerSuffix:Show()
+					end
+
+					editBox:SetTextInsets(15 + header:GetWidth() + (headerSuffix:IsShown() and headerSuffix:GetWidth() or 0), 13, 0, 0)
 				end
-
-				editBox:SetTextInsets(15 + header:GetWidth() + (headerSuffix:IsShown() and headerSuffix:GetWidth() or 0), 13, 0, 0)
 			end
 		end
+
+		hooksecurefunc("ChatEdit_UpdateHeader", ChatEdit_UpdateHeader)
 	end
 
-	hooksecurefunc("ChatEdit_UpdateHeader", ChatEdit_UpdateHeader)
-	--]=]
-
-	--[=[ sets the name of the person in the chat to match their alias (breaks sending messages the UI tries to send to the alias and fails...)
-	local function ChatFilter_AddMessage(self, event, text, name, ...)
-		if event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" then
-			name = GetAliasFromNote("WHISPER", name) or name
-			return false, text, name, ...
-		elseif event == "CHAT_MSG_BN_WHISPER" or event == "CHAT_MSG_BN_WHISPER_INFORM" then
-			name = GetAliasFromNote("BN_WHISPER", name) or name
-			return false, text, name, ...
+	-- updates the chat messages name
+	do
+		local function ChatFilter_AddMessage(self, event, text, name, ...)
+			if event == "CHAT_MSG_AFK" or event == "CHAT_MSG_DND" or event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" then
+				local lineID = select(9, ...)
+				name = GetAliasFromNote("WHISPER", name, lineID)
+				return false, text, name, ...
+			elseif event == "CHAT_MSG_BN_WHISPER" or event == "CHAT_MSG_BN_WHISPER_INFORM" then
+				local lineID = select(9, ...)
+				name = GetAliasFromNote("BN_WHISPER", name, lineID)
+				return false, text, name, ...
+			end
+			return false
 		end
-		return false
+
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_AFK", ChatFilter_AddMessage)
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_DND", ChatFilter_AddMessage)
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", ChatFilter_AddMessage)
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", ChatFilter_AddMessage)
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", ChatFilter_AddMessage)
+		ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", ChatFilter_AddMessage)
 	end
 
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", ChatFilter_AddMessage)
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", ChatFilter_AddMessage)
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", ChatFilter_AddMessage)
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", ChatFilter_AddMessage)
-	--]=]
-
+	-- updates the quick join popup name
 	--[=[
-	local function QuickJoin_OnShow(...)
-	end
+	do
+		local function QuickJoinButtonSetEntry(self)
+			if not self.entry then
+				return
+			end
+			-- TODO: self.entry.displayedMembers
+		end
 
-	local function QuickJoin_OnEnter(...)
-	end
+		for i = 1, #QuickJoinFrame.ScrollFrame.buttons do
+			local button = QuickJoinFrame.ScrollFrame.buttons[i]
+			hooksecurefunc(button, "SetEntry", QuickJoinButtonSetEntry)
+		end
 
-	for i = 1, #QuickJoinFrame.ScrollFrame.buttons do
-		local button = QuickJoinFrame.ScrollFrame.buttons[i]
+		local SetText = getmetatable(QuickJoinToastButton.Toast.Text).__index.SetText
 
-		button:HookScript("OnShow", QuickJoin_OnShow)
-		button:HookScript("OnEnter", QuickJoin_OnEnter)
+		local function ToastSetText(self, text)
+			if not text then
+				return
+			end
+			-- TODO: SetText(self, text:gsub("", ""))
+		end
+
+		hooksecurefunc(QuickJoinToastButton.Toast.Text, "SetText", ToastSetText)
+		hooksecurefunc(QuickJoinToastButton.Toast2.Text, "SetText", ToastSetText)
 	end
 	--]=]
 end

@@ -1,5 +1,117 @@
 local addonName, ns = ...
 
+-- classic (old to new API compatibility layer)
+local C_BattleNet = _G.C_BattleNet
+if not C_BattleNet then
+	local EMPTY_TABLE = {}
+	local function GetAccountInfo(presenceID, accountName, battleTag, isBattleTagPresence, characterName, bnetIDGameAccount, client, isOnline, lastOnline, isAFK, isDND, messageText, noteText, isRIDFriend, messageTime, canSoR, isReferAFriend, canSummonFriend, ...)
+		local wowProjectID = isOnline and 2 or 0 -- classic if online
+		local rafLinkType = isReferAFriend and 2 or 0 -- enum table doesnt exist in classic
+		local isFriend = nil -- TODO
+		local isFavorite = nil -- TODO
+		local appearOffline = nil -- TODO
+		return {
+			bnetAccountID = presenceID,
+			accountName = accountName,
+			battleTag = battleTag,
+			isFriend = isFriend,
+			isBattleTagFriend = isBattleTagPresence,
+			lastOnlineTime = lastOnline,
+			isAFK = isAFK,
+			isDND = isDND,
+			isFavorite = isFavorite,
+			appearOffline = appearOffline,
+			customMessage = messageText,
+			customMessageTime = messageTime,
+			note = noteText,
+			rafLinkType = rafLinkType,
+			gameAccountInfo = bnetIDGameAccount and C_BattleNet.GetGameAccountInfoByID(bnetIDGameAccount) or EMPTY_TABLE,
+		}
+	end
+	local function GetGameAccountInfo(hasFocus, characterName, client, realmName, realmID, faction, race, class, guild, zoneName, level, gameText, broadcastText, broadcastTime, canSoR, toonID, bnetIDAccount, isGameAFK, isGameBusy, ...)
+		local realmDisplayName = realmName
+		local isOnline = toonID and toonID > 0 -- online if there is a character
+		local wowProjectID = isOnline and 2 or 0 -- classic if online
+		local playerGuid = nil -- TODO
+		local isWowMobile = nil -- TODO
+		return {
+			gameAccountID = bnetIDAccount,
+			clientProgram = client,
+			isOnline = isOnline,
+			isGameBusy = isGameBusy,
+			isGameAFK = isGameAFK,
+			wowProjectID = wowProjectID,
+			characterName = characterName,
+			realmName = realmName,
+			realmDisplayName = realmDisplayName,
+			realmID = realmID,
+			factionName = faction,
+			raceName = race,
+			className = class,
+			areaName = zoneName,
+			characterLevel = level,
+			richPresence = gameText,
+			playerGuid = playerGuid,
+			isWowMobile = isWowMobile,
+			canSummon = canSoR,
+			hasFocus = hasFocus,
+		}
+	end
+	C_BattleNet = {}
+	C_BattleNet.GetAccountInfoByGUID = function(guid)
+		return GetAccountInfo(_G.BNGetFriendInfoByID(guid))
+	end
+	C_BattleNet.GetAccountInfoByID = function(id, wowAccountGUID)
+		return GetAccountInfo(_G.BNGetFriendInfo(id, wowAccountGUID))
+	end
+	C_BattleNet.GetGameAccountInfoByGUID = function(guid)
+		return GetGameAccountInfo(_G.BNGetGameAccountInfoByGUID(guid))
+	end
+	C_BattleNet.GetGameAccountInfoByID = function(id, accountIndex)
+		return GetGameAccountInfo(_G.BNGetGameAccountInfo(id, accountIndex))
+	end
+	C_BattleNet.GetFriendAccountInfo = function(friendIndex)
+		return C_BattleNet.GetAccountInfoByID(friendIndex)
+	end
+	C_BattleNet.GetFriendGameAccountInfo = function(friendIndex, accountIndex)
+		local hasFocus, characterName, client, realmName, realmID, faction, race, class, guild, zoneName, level, gameText, broadcastText, broadcastTime, canSoR, bnetIDGameAccount, presenceID, unknown1, unknown2, characterGUID, factionID, realmDisplayName = _G.BNGetFriendGameAccountInfo(friendIndex, accountIndex)
+		if hasFocus == nil then return end
+		local isOnline = characterGUID and true or false -- guid is set if online
+		local wowProjectID = isOnline and 2 or 0 -- classic if online
+		local accountInfo = C_BattleNet.GetFriendAccountInfo(friendIndex)
+		local gameAccountInfo = accountInfo and accountInfo.gameAccountInfo
+		local isGameBusy = gameAccountInfo and gameAccountInfo.isGameBusy == true
+		local isGameAFK = gameAccountInfo and gameAccountInfo.isGameAFK == true
+		local isWowMobile = gameAccountInfo and gameAccountInfo.isWowMobile == true
+		return {
+			gameAccountID = bnetIDGameAccount,
+			clientProgram = client,
+			isOnline = isOnline,
+			isGameBusy = isGameBusy,
+			isGameAFK = isGameAFK,
+			wowProjectID = wowProjectID,
+			characterName = characterName,
+			realmName = realmName,
+			realmDisplayName = realmDisplayName,
+			realmID = realmID,
+			factionName = faction,
+			raceName = race,
+			className = class,
+			areaName = zoneName,
+			characterLevel = level,
+			richPresence = gameText,
+			playerGuid = characterGUID,
+			isWowMobile = isWowMobile,
+			canSummon = canSoR,
+			hasFocus = hasFocus,
+		}
+	end
+	C_BattleNet.GetFriendNumGameAccounts = function(friendIndex)
+		return _G.BNGetNumFriendGameAccounts(friendIndex)
+	end
+end
+
+-- retail (new to old API compatibility layer)
 local BNGetFriendInfo, BNGetFriendInfoByID, BNGetFriendGameAccountInfo, BNGetGameAccountInfo, BNGetGameAccountInfoByGUID, BNGetNumFriendGameAccounts
 do
 	local function getDeprecatedAccountInfo(accountInfo)
@@ -27,7 +139,7 @@ do
 			accountInfo.isFriend, -- 14
 			accountInfo.customMessageTime, -- 15
 			wowProjectID, -- 16
-			accountInfo.rafLinkType == Enum.RafLinkType.Recruit, -- 17
+			accountInfo.rafLinkType == Enum.RafLinkType and Enum.RafLinkType.Recruit, -- 17
 			accountInfo.gameAccountInfo.canSummon, -- 18
 			accountInfo.isFavorite, -- 19
 			accountInfo.gameAccountInfo.isWowMobile, -- 20
@@ -86,12 +198,12 @@ do
 		local accountInfo = C_BattleNet.GetFriendAccountInfo(friendIndex)
 		return getDeprecatedGameAccountInfo(gameAccountInfo, accountInfo)
 	end
-	BNGetGameAccountInfo = function(id, accountIndex)
+	BNGetGameAccountInfo = function(id, accountIndex) -- UNUSED
 		local gameAccountInfo = C_BattleNet.GetGameAccountInfoByID(id, accountIndex)
 		local accountInfo = C_BattleNet.GetAccountInfoByID(id)
 		return getDeprecatedGameAccountInfo(gameAccountInfo, accountInfo)
 	end
-	BNGetGameAccountInfoByGUID = function(guid)
+	BNGetGameAccountInfoByGUID = function(guid) -- UNUSED
 		local gameAccountInfo = C_BattleNet.GetGameAccountInfoByGUID(guid)
 		local accountInfo = C_BattleNet.GetAccountInfoByGUID(guid)
 		return getDeprecatedGameAccountInfo(gameAccountInfo, accountInfo)
@@ -589,6 +701,20 @@ function addon:InitAPI()
 		return name
 	end
 
+	local EditTextReplaceNames do
+		local function replace(data, displayText)
+			return ("|HBNplayer:%s|h%s|h"):format(data, (GetAliasFromNote("BN_WHISPER", displayText)))
+		end
+
+		function EditTextReplaceNames(text)
+			if type(text) ~= "string" then
+				return text
+			end
+			text = text:gsub("|HBNplayer:(.-)|h(.-)|h", replace)
+			return text
+		end
+	end
+
 	-- updates the chat edit header
 	do
 		local function ChatEdit_UpdateHeader(editBox)
@@ -645,18 +771,85 @@ function addon:InitAPI()
 		ChatFrame_AddMessageEventFilter("CHAT_MSG_DND", ChatFilter_AddMessage)
 		ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", ChatFilter_AddMessage)
 		ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", ChatFilter_AddMessage)
-		ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", ChatFilter_AddMessage)
-		ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", ChatFilter_AddMessage)
+
+		-- we can't use this to modify the bnet names so we need to use the code below to hook the history push buffer and modify the message there
+		-- ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", ChatFilter_AddMessage)
+		-- ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", ChatFilter_AddMessage)
+		--[[
+		do
+			local function PushFront(self)
+				local count = self.headIndex
+				if count == 0 then
+					count = self.maxElements
+				end
+				local element = self.elements[count]
+				local text = element and element.message
+				if text and text ~= "" then
+					element.message = EditTextReplaceNames(text)
+				end
+			end
+
+			local hookedChatFrames = {}
+			local hookedLastIndex = 1
+
+			for i = 1, 100 do
+				local chatFrame = _G["ChatFrame" .. i]
+				if not chatFrame then
+					hookedLastIndex = i
+					break
+				end
+				if i ~= 2 and not hookedChatFrames[chatFrame] then
+					hookedChatFrames[chatFrame] = true
+					hooksecurefunc(chatFrame.historyBuffer, "PushFront", PushFront)
+					-- [=[
+					local count = chatFrame.historyBuffer.headIndex
+					for j = 1, count do
+						local element = chatFrame.historyBuffer.elements[j]
+						local text = element and element.message
+						if text and text ~= "" then
+							element.message = EditTextReplaceNames(text)
+						end
+					end
+					--]=]
+				end
+			end
+
+			local function FCF_OpenTemporaryWindow()
+				for i = hookedLastIndex, 100 do
+					local chatFrame = _G["ChatFrame" .. i]
+					if not chatFrame then
+						hookedLastIndex = i
+						break
+					end
+					if not hookedChatFrames[chatFrame] then
+						hookedChatFrames[chatFrame] = true
+						hooksecurefunc(chatFrame.historyBuffer, "PushFront", PushFront)
+					end
+				end
+			end
+
+			hooksecurefunc("FCF_OpenTemporaryWindow", FCF_OpenTemporaryWindow)
+		end
+		--]]
 	end
 
 	-- updates the quick join popup name
-	--[=[
-	do
+	-- [[
+	if QuickJoinToastButton then
+		local SetText = getmetatable(QuickJoinToastButton.Toast.Text).__index.SetText
+
 		local function QuickJoinButtonSetEntry(self)
 			if not self.entry then
 				return
 			end
-			-- TODO: self.entry.displayedMembers
+			for i = 1, #self.entry.displayedMembers do
+				local member = self.Members[i]
+				local text = member:GetText()
+				if text and text ~= "" then
+					text = EditTextReplaceNames(text)
+					SetText(member, text)
+				end
+			end
 		end
 
 		for i = 1, #QuickJoinFrame.ScrollFrame.buttons do
@@ -664,19 +857,18 @@ function addon:InitAPI()
 			hooksecurefunc(button, "SetEntry", QuickJoinButtonSetEntry)
 		end
 
-		local SetText = getmetatable(QuickJoinToastButton.Toast.Text).__index.SetText
-
 		local function ToastSetText(self, text)
-			if not text then
+			if not text or text == "" then
 				return
 			end
-			-- TODO: SetText(self, text:gsub("", ""))
+			text = EditTextReplaceNames(text)
+			SetText(self, text)
 		end
 
 		hooksecurefunc(QuickJoinToastButton.Toast.Text, "SetText", ToastSetText)
 		hooksecurefunc(QuickJoinToastButton.Toast2.Text, "SetText", ToastSetText)
 	end
-	--]=]
+	--]]
 end
 
 do

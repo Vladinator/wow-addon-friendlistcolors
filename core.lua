@@ -315,14 +315,15 @@ end
 local function ColorRgbToHex(r, g, b)
 	if type(r) == "table" then
 		if r.r then
-			g = r.g
-			b = r.b
-			r = r.r
+			r, g, b = r.r, r.g, r.b
 		else
 			r, g, b = unpack(r)
 		end
 	end
-
+	if not r then
+		print("ERROR", r, g, b, "") -- DEBUG
+		return "ffffff"
+	end
 	return format("%02X%02X%02X", floor(r * 255), floor(g * 255), floor(b * 255))
 end
 
@@ -489,7 +490,7 @@ local function ParseColor(temp, field)
 		local r, g, b = field:match("^%s*(%d+)%s*,%s*(%d+)%s*,%s*(%d+)%s*$")
 
 		if r then
-			out = ColorRgbToHex({r = r/255, g = g/255, b = b/255})
+			out = ColorRgbToHex(r/255, g/255, b/255)
 
 		else
 			local hex = field:match("^%s*([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])%s*$")
@@ -647,17 +648,31 @@ function addon:InitAPI()
 		return SetText(self, ...)
 	end
 
-	local scrollFrame = FriendsListFrameScrollFrame or FriendsFrameFriendsScrollFrame -- retail and classic support
-	local friendButtons = scrollFrame.buttons
+	local HookButtons do
+		local hookedButtons = {}
 
-	for i = 1, #friendButtons do
-		local button = friendButtons[i]
-
-		if not SetText then
-			SetText = button.name.SetText
+		function HookButtons(buttons)
+			for i = 1, #buttons do
+				local button = buttons[i]
+				if not hookedButtons[button] then
+					hookedButtons[button] = true
+					if not SetText then
+						SetText = button.name.SetText
+					end
+					button.name.SetText = UpdateButtonName
+				end
+			end
 		end
+	end
 
-		button.name.SetText = UpdateButtonName
+	local scrollFrame = FriendsListFrameScrollFrame or FriendsFrameFriendsScrollFrame or FriendsListFrame -- DF, retail and classic support
+
+	if scrollFrame.ScrollBox then
+		scrollFrame.ScrollBox:GetView():RegisterCallback(ScrollBoxListMixin.Event.OnAcquiredFrame, function(_, button, created) if created then HookButtons({button}) end end)
+	end
+
+	if scrollFrame.buttons then
+		HookButtons(scrollFrame.buttons)
 	end
 
 	local function SafeReplaceName(oldName, newName, lineID, bnetIDAccount)
@@ -852,9 +867,26 @@ function addon:InitAPI()
 			end
 		end
 
-		for i = 1, #QuickJoinFrame.ScrollFrame.buttons do
-			local button = QuickJoinFrame.ScrollFrame.buttons[i]
-			hooksecurefunc(button, "SetEntry", QuickJoinButtonSetEntry)
+		local HookQuickJoinButtons do
+			local hookedButtons = {}
+
+			function HookQuickJoinButtons(buttons)
+				for i = 1, #buttons do
+					local button = buttons[i]
+					if not hookedButtons[button] then
+						hookedButtons[button] = true
+						hooksecurefunc(button, "SetEntry", QuickJoinButtonSetEntry)
+					end
+				end
+			end
+		end
+
+		if QuickJoinFrame.ScrollBox then
+			QuickJoinFrame.ScrollBox:GetView():RegisterCallback(ScrollBoxListMixin.Event.OnAcquiredFrame, function(_, button, created) if created then HookQuickJoinButtons({button}) end end)
+		end
+
+		if QuickJoinFrame.ScrollFrame and QuickJoinFrame.ScrollFrame.buttons then
+			HookQuickJoinButtons(QuickJoinFrame.ScrollFrame.buttons)
 		end
 
 		local function ToastSetText(self, text)

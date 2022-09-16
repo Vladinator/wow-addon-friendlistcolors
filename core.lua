@@ -321,7 +321,6 @@ local function ColorRgbToHex(r, g, b)
 		end
 	end
 	if not r then
-		print("ERROR", r, g, b, "") -- DEBUG
 		return "ffffff"
 	end
 	return format("%02X%02X%02X", floor(r * 255), floor(g * 255), floor(b * 255))

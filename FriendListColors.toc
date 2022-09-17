@@ -1,8 +1,8 @@
-﻿## Interface: 90001
+﻿## Interface: 90207
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 9.0.1.201110
+## Version: 9.2.7.220917
 ## SavedVariables: FriendListColorsDB
 ## X-Curse-Project-ID: 43444
 ## X-WoWI-ID: 18256

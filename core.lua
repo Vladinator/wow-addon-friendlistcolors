@@ -1,3 +1,8 @@
+local GameTooltip = _G.GameTooltip ---@diagnostic disable-line: undefined-field
+local InterfaceOptions_AddCategory = _G.InterfaceOptions_AddCategory ---@diagnostic disable-line: undefined-field
+local InterfaceOptionsFramePanelContainer = _G.InterfaceOptionsFramePanelContainer or _G.SettingsPanel ---@diagnostic disable-line: undefined-field
+local ReloadUI = _G.ReloadUI ---@diagnostic disable-line: undefined-field
+
 local addonName = ... ---@type string
 
 local Color do
@@ -44,11 +49,11 @@ local Color do
 
 	Color = {}
 
+	Color.From = ColorToHex
+
 	Color.Gray = Color.From(_G.FRIENDS_GRAY_COLOR) ---@diagnostic disable-line: undefined-field
 	Color.BNet = Color.From(_G.FRIENDS_BNET_NAME_COLOR) ---@diagnostic disable-line: undefined-field
 	Color.WoW = Color.From(_G.FRIENDS_WOW_NAME_COLOR) ---@diagnostic disable-line: undefined-field
-
-	Color.From = ColorToHex
 
 	---@param query any
 	---@return string?
@@ -848,25 +853,64 @@ local Init do
 			return Parse.Format(friendWrapper, format)
 		end
 
+		---@param raw string
+		---@return string
 		local function ConvertToText(raw)
-			return raw:gsub("|", "||")
+			return (raw:gsub("|", "||"))
 		end
 
+		---@param raw string
+		---@return string
 		local function ConvertToFormat(raw)
-			return raw:gsub("||", "|")
+			return (raw:gsub("||", "|"))
 		end
 
-		-- TODO: WIP
-		local varNamesBNet = [[TODO BNet]]
-		local varNamesWoW = [[TODO WoW]]
+		local varNamesBNet = {
+			"accountName",
+			"battleTag",
+			"characterName",
+			"characterLevel",
+			"className",
+			"areaName",
+			"note",
+			"customMessage",
+			"richPresence",
+			"raceName",
+			"factionName",
+			"realmName",
+			"realmDisplayName",
+			"canSummon",
+			"isInCurrentRegion",
+			"isFavorite",
+			"isBattleTagFriend",
+			"appearOffline",
+			"isOnline",
+			"isWowMobile",
+			"isGameAFK",
+			"isGameBusy",
+			"isAFK",
+			"isDND",
+		}
+
+		local varNamesWoW = {
+			"name",
+			"level",
+			"className",
+			"area",
+			"notes",
+			"connected",
+			"mobile",
+			"afk",
+			"dnd",
+		}
 
 		local optionGroups = {
 			{
 				label = "Format",
 				description = "Customize the appearance of your friends list.\n\nList of variables for BNet friends:  " ..
-					varNamesBNet ..
+					"|cffFFFF00" .. table.concat(varNamesBNet, "|r |cffFFFF00") .. "|r" ..
 					"\n\nList of variables for World of Warcraft friends:  " ..
-					varNamesWoW ..
+					"|cffFFFF00" .. table.concat(varNamesWoW, "|r |cffFFFF00") .. "|r" ..
 					"\n\nSyntax examples:\n  [=accountName||name]\n  [if=battleTag][=battleTag][if=characterName] - [=characterName][/if][/if]\n  [color=class][=characterName||name][/color]\n  [color=level][=level][/color]\n",
 				options = {
 					{
@@ -959,9 +1003,17 @@ local Init do
 			},
 		}
 
+		---@class PanelWidget : Frame
+
+		---@class PanelTitle : PanelWidget
+
+		---@param panel Frame
+		---@param name string
+		---@param version? string
 		local function CreateTitle(panel, name, version)
 
-			local title = CreateFrame("Frame", "$parentTitle" .. unique, panel)
+			---@type PanelTitle
+			local title = CreateFrame("Frame", "$parentTitle" .. unique, panel) ---@diagnostic disable-line: assign-type-mismatch
 			unique = unique + 1
 			title:SetPoint("TOPLEFT", panel, "TOPLEFT")
 			title:SetPoint("TOPRIGHT", panel, "TOPRIGHT")
@@ -981,9 +1033,15 @@ local Init do
 
 		end
 
+		---@class PanelHeader : PanelWidget
+
+		---@param panel Frame
+		---@param anchor PanelWidget
+		---@param text string
 		local function CreateHeader(panel, anchor, text)
 
-			local header = CreateFrame("Frame", "$parentHeader" .. unique, anchor:GetParent() or anchor)
+			---@type PanelHeader
+			local header = CreateFrame("Frame", "$parentHeader" .. unique, anchor:GetParent() or anchor) ---@diagnostic disable-line: assign-type-mismatch
 			unique = unique + 1
 			header:SetHeight(18)
 
@@ -1019,11 +1077,16 @@ local Init do
 
 		end
 
+		---@class PanelParagraph : PanelWidget
+
+		---@param anchor PanelWidget
+		---@param text string
 		local function CreateParagraph(anchor, text)
 
 			local MAX_HEIGHT = 255
 
-			local header = CreateFrame("Frame", "$parentParagraph" .. unique, anchor:GetParent() or anchor)
+			---@type PanelParagraph
+			local header = CreateFrame("Frame", "$parentParagraph" .. unique, anchor:GetParent() or anchor) ---@diagnostic disable-line: assign-type-mismatch
 			unique = unique + 1
 			header:SetHeight(MAX_HEIGHT)
 
@@ -1038,13 +1101,13 @@ local Init do
 			header.label:SetText(text)
 			header.label:SetHeight(MAX_HEIGHT)
 
-			header.label:SetWordWrap(true)
+			header.label:SetWordWrap(true) ---@diagnostic disable-line: redundant-parameter
 			header.label:SetNonSpaceWrap(true)
 			header.label:SetMaxLines(20)
 
 			header:SetScript("OnUpdate", function()
 				if header:GetHeight() < MAX_HEIGHT and header.label:GetHeight() == header:GetHeight() then
-					header:SetScript("OnUpdate", nil)
+					header:SetScript("OnUpdate", nil) ---@diagnostic disable-line: param-type-mismatch
 				end
 				local height = header.label:GetStringHeight() + 5
 				header.label:SetHeight(height)
@@ -1067,33 +1130,27 @@ local Init do
 
 		end
 
-		local function CreateCheckbox(anchor, text, tooltip)
+		---@class PanelEditBox : PanelWidget, EditBox
+		---@field Left Frame
+		---@field Middle Frame
+		---@field Right Frame
+		---@field Backdrop Frame|BackdropTemplate
 
-			local checkbox = CreateFrame("CheckButton", "$parentCheckbox" .. unique, anchor:GetParent() or anchor, "InterfaceOptionsCheckButtonTemplate")
-			unique = unique + 1
-			checkbox.Text:SetText(text)
-			checkbox.tooltipText = tooltip
-
-			if anchor:GetObjectType() == "Frame" then
-				checkbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
-			else
-				checkbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
-			end
-
-			return checkbox
-
-		end
-
+		---@param anchor PanelWidget
+		---@param kind? "number"|"text"
+		---@param text? string
+		---@param tooltip? string
 		local function CreateInput(anchor, kind, text, tooltip)
 
-			local editbox = CreateFrame("EditBox", "$parentEditBox" .. unique, anchor:GetParent() or anchor, "InputBoxTemplate")
+			---@type PanelEditBox
+			local editbox = CreateFrame("EditBox", "$parentEditBox" .. unique, anchor:GetParent() or anchor, "InputBoxTemplate") ---@diagnostic disable-line: assign-type-mismatch
 			unique = unique + 1
 			editbox:SetFontObject("GameFontHighlight")
 			editbox:SetSize(160, 22)
 			editbox:SetAutoFocus(false)
-			editbox:SetHyperlinksEnabled(false)
+			editbox:SetHyperlinksEnabled(false) ---@diagnostic disable-line: redundant-parameter
 			editbox:SetMultiLine(false)
-			editbox:SetIndentedWordWrap(false)
+			editbox:SetIndentedWordWrap(false) ---@diagnostic disable-line: redundant-parameter
 			editbox:SetMaxLetters(255)
 			editbox.tooltipText = tooltip
 
@@ -1151,132 +1208,11 @@ local Init do
 
 		end
 
-		local function CreateButton(anchor, text, tooltip)
-
-			local button = CreateFrame("Button", "$parentButton" .. unique, anchor:GetParent() or anchor, "UIPanelButtonTemplate")
-			unique = unique + 1
-			button:SetSize(80, 22)
-			button:SetText(text)
-			button.tooltipText = "|cffffd100" .. tooltip .. "|r"
-
-			if anchor:GetObjectType() == "Frame" then
-				button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
-			else
-				button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
-			end
-
-			return button
-
-		end
-
-		local function CreateDropdownOptions(key)
-
-			local temp = {}
-
-			if key == "ITEM_QUALITY_PLAYER" or key == "ITEM_QUALITY_GROUP" or key == "ITEM_QUALITY_RAID" then
-				-- table.insert(temp, { value = -1, label = NONE, r = 1, g = 1, b = 1, hex = "ffffffff" })
-
-				for i = 0, 7 do -- Poor to Artifact (8 is WoW Token)
-					local r, g, b, hex = GetItemQualityColor(i)
-
-					table.insert(temp, { value = i, label = _G["ITEM_QUALITY" .. i .. "_DESC"], r = r, g = g, b = b, hex = hex })
-				end
-			end
-
-			return temp
-
-		end
-
-		local function CreateDropdownInfoSetValue(option)
-
-			-- ns.config:write(option.arg2, option.value)
-			option.arg1:SetValue(option.value)
-			handlers.panel.refresh()
-
-		end
-
-		local function CreateDropdownInitialize(dropdown)
-
-			local key = dropdown.option.key
-			local selectedValue = UIDropDownMenu_GetSelectedValue(dropdown)
-			local info = UIDropDownMenu_CreateInfo()
-			info.func = CreateDropdownInfoSetValue
-			info.arg1 = dropdown
-			info.arg2 = key
-
-			for i = 1, #dropdown.option.options do
-				local option = dropdown.option.options[i]
-
-				info.colorCode = "|c" .. option.hex
-				info.text = option.label
-				info.value = option.value
-				info.checked = info.value == selectedValue
-
-				UIDropDownMenu_AddButton(info)
-			end
-
-		end
-
-		local function CreateDropdownSetValue(dropdown, value)
-			dropdown.value = value
-			UIDropDownMenu_SetSelectedValue(dropdown, value)
-		end
-
-		local function CreateDropdownGetValue(dropdown)
-			return UIDropDownMenu_GetSelectedValue(dropdown)
-		end
-
-		local function CreateDropdownRefreshValue(dropdown)
-			UIDropDownMenu_Initialize(dropdown, CreateDropdownInitialize)
-			UIDropDownMenu_SetSelectedValue(dropdown, dropdown.value)
-		end
-
-		local function CreateDropdown(anchor, option, text, tooltip)
-
-			local container = CreateFrame("ScrollFrame", "$parentContainer" .. unique, anchor:GetParent() or anchor)
-			unique = unique + 1
-
-			local dropdown = CreateFrame("Frame", "$parentDropdown" .. unique, container, "UIDropDownMenuTemplate")
-			container.dropdown = dropdown
-			unique = unique + 1
-			dropdown:SetPoint("TOPLEFT", -12, -20)
-
-			local w, h = dropdown:GetSize()
-			container:SetSize(w, h + 18)
-
-			dropdown.label = dropdown:CreateFontString(nil, "BACKGROUND", "GameFontHighlight")
-			dropdown.label:SetPoint("BOTTOMLEFT", "$parent", "TOPLEFT", 16, 3)
-			dropdown.label:SetText(text)
-
-			dropdown.option = option
-			dropdown.defaultValue = 0
-			-- dropdown.value = ns.config:read(option.key, 0)
-			dropdown.oldValue = dropdown.value
-			dropdown.tooltip = tooltip
-
-			dropdown.SetValue = CreateDropdownSetValue
-			dropdown.GetValue = CreateDropdownGetValue
-			dropdown.RefreshValue = CreateDropdownRefreshValue
-
-			UIDropDownMenu_SetWidth(dropdown, 90)
-			UIDropDownMenu_Initialize(dropdown, CreateDropdownInitialize)
-			UIDropDownMenu_SetSelectedValue(dropdown, dropdown.value)
-
-			if anchor:GetObjectType() == "Frame" then
-				container:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
-			else
-				container:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
-			end
-
-			return container
-
-		end
-
 		local function CreatePanel()
 
-			local panel = CreateFrame("Frame", addonName .. "Panel" .. unique, _G.InterfaceOptionsFramePanelContainer)
+			local panel = CreateFrame("Frame", addonName .. "Panel" .. unique, InterfaceOptionsFramePanelContainer)
 			unique = unique + 1
-			panel.widgets = {}
+			panel.widgets = {} ---@type PanelWidget[]
 			panel.name = addonName
 
 			-- add the standard interface buttons
@@ -1321,7 +1257,10 @@ local Init do
 			-- add widgets to the content frame
 			do
 
-				local last = CreateTitle(panel.content, addonName, GetAddOnMetadata(addonName, "Version"))
+				---@type PanelWidget
+				local last
+
+				last = CreateTitle(panel.content, addonName, GetAddOnMetadata(addonName, "Version"))
 
 				-- add options
 				do
@@ -1340,21 +1279,7 @@ local Init do
 
 							local option = optionGroup.options[j]
 
-							if option.checkbox then
-								last = CreateCheckbox(last, option.label, option.description)
-								last.option = option
-								last.refresh = handlers.option.default.update
-								last:SetScript("OnClick", handlers.option.default.click)
-								table.insert(panel.widgets, last)
-
-							elseif option.number then
-								last = CreateInput(last, "number", option.label, option.description)
-								last.option = option
-								last.refresh = handlers.option.number.update
-								last:SetScript("OnEnterPressed", function(self, ...) handlers.option.number.save(self, ...) self:ClearFocus() end)
-								table.insert(panel.widgets, last)
-
-							elseif option.text then
+							if option.text then
 								last = CreateInput(last, "text", option.label, option.description)
 								last.option = option
 								last.refresh = handlers.option.text.update
@@ -1369,13 +1294,6 @@ local Init do
 								last.Backdrop:Hide()
 								last:Disable()
 								last:SetScript("OnUpdate", handlers.option.text.example)
-								table.insert(panel.widgets, last)
-
-							elseif option.dropdown then
-								option.options = CreateDropdownOptions(option.key)
-								last = CreateDropdown(last, option, option.label, option.description)
-								last.option = option
-								last.refresh = function(last) last.dropdown:RefreshValue() end
 								table.insert(panel.widgets, last)
 							end
 

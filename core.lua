@@ -39,10 +39,10 @@ local Color do
 		for k, v in pairs(_G.LOCALIZED_CLASS_NAMES_FEMALE) do cache[v] = ColorToHex(colors[k]) end
 
 		if WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
-			cache.EVOKER = "33937F"
-			cache.MONK = "00FF98"
-			cache.PALADIN = "F48CBA"
-			cache.SHAMAN = "0070DD"
+			cache.Evoker = "33937F"
+			cache.Monk = "00FF98"
+			cache.Paladin = "F48CBA"
+			cache.Shaman = "0070DD"
 		end
 
 	end
@@ -58,9 +58,6 @@ local Color do
 	---@param query any
 	---@return string?
 	function Color.ForClass(query)
-		if type(query) == "string" then
-			query = query:upper()
-		end
 		return cache[query]
 	end
 
@@ -400,7 +397,17 @@ local Friends do
 	---@param data BNetAccountInfoExtended|BNetAccountInfo|FriendInfo
 	---@param isBNet? boolean
 	function Friends.AddFieldAlias(data, isBNet)
-		-- TODO: NYI
+		if isBNet then
+			-- data.name = data.characterName
+			data.characterLevel = data.level
+			data.area = data.areaName
+		else
+			-- data.characterName = data.name
+			data.level = data.characterLevel
+			data.areaName = data.area
+		end
+		data.class = data.className
+		data.race = data.raceName
 	end
 
 	---@alias FriendType number `2`=`FRIENDS_BUTTON_TYPE_BNET` and `3`=`FRIENDS_BUTTON_TYPE_WOW`
@@ -908,9 +915,9 @@ local Init do
 			{
 				label = "Format",
 				description = "Customize the appearance of your friends list.\n\nList of variables for BNet friends:  " ..
-					"|cffFFFF00" .. table.concat(varNamesBNet, "|r |cffFFFF00") .. "|r" ..
+					"|cffFFFF00" .. table.concat(varNamesBNet, "|r  |cffFFFF00") .. "|r" ..
 					"\n\nList of variables for World of Warcraft friends:  " ..
-					"|cffFFFF00" .. table.concat(varNamesWoW, "|r |cffFFFF00") .. "|r" ..
+					"|cffFFFF00" .. table.concat(varNamesWoW, "|r  |cffFFFF00") .. "|r" ..
 					"\n\nSyntax examples:\n  [=accountName||name]\n  [if=battleTag][=battleTag][if=characterName] - [=characterName][/if][/if]\n  [color=class][=characterName||name][/color]\n  [color=level][=level][/color]\n",
 				options = {
 					{

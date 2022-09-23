@@ -775,6 +775,7 @@ local Init do
 
 	local function InitUI()
 
+		local ui
 		local unique = 1
 
 		---@param format string
@@ -900,11 +901,11 @@ local Init do
 				end,
 				default = function()
 					_G[format("%sDB", addonName)] = nil
-					_G.ReloadUI()
+					ReloadUI()
 				end,
 				refresh = function()
-					for i = 1, #loaded.widgets do
-						local widget = loaded.widgets[i]
+					for i = 1, #ui.widgets do
+						local widget = ui.widgets[i]
 						if type(widget.refresh) == "function" then
 							widget.refresh(widget)
 						end
@@ -1393,8 +1394,8 @@ local Init do
 
 		end
 
-		local panel = CreatePanel()
-		InterfaceOptions_AddCategory(panel)
+		ui = CreatePanel()
+		InterfaceOptions_AddCategory(ui)
 
 	end
 

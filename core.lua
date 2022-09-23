@@ -39,10 +39,10 @@ local Color do
 		for k, v in pairs(_G.LOCALIZED_CLASS_NAMES_FEMALE) do cache[v] = ColorToHex(colors[k]) end
 
 		if WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
-			cache.Evoker = "33937F"
-			cache.Monk = "00FF98"
-			cache.Paladin = "F48CBA"
-			cache.Shaman = "0070DD"
+			cache.Evoker = cache.Evoker or "33937F"
+			cache.Monk = cache.Monk or "00FF98"
+			cache.Paladin = cache.Paladin or "F48CBA"
+			cache.Shaman = cache.Shaman or "0070DD"
 		end
 
 	end

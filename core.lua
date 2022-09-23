@@ -774,7 +774,628 @@ local Init do
 	end
 
 	local function InitUI()
-		-- TODO: NYI
+
+		local unique = 1
+
+		---@param format string
+		---@param isBNet? boolean
+		local function ExampleFriend(format, isBNet)
+			local friendWrapper = {} ---@type FriendWrapper
+			local maxLevel = GetMaxLevelForExpansionLevel(GetExpansionLevel())
+			if isBNet then
+				---@type BNetAccountInfoExtended
+				local data = {
+					accountName = "Ola Nordmann",
+					appearOffline = false,
+					battleTag = "Ola#1234",
+					bnetAccountID = 1234,
+					customMessage = "Hello World!",
+					customMessageTime = 0,
+					isAFK = false,
+					isBattleTagFriend = false,
+					isDND = false,
+					isFavorite = true,
+					isFriend = true,
+					lastOnlineTime = 0,
+					note = "This is a sample bnet note.",
+					rafLinkType = _G.Enum.RafLinkType.Friend,
+					-- BNetGameAccountInfo (gameAccountInfo)
+					areaName = "Oribos",
+					canSummon = false,
+					characterLevel = maxLevel,
+					characterName = "Carl",
+					className = "Mage",
+					clientProgram = "BNET_CLIENT_WOW",
+					factionName = "Horde",
+					gameAccountID = 5678,
+					hasFocus = true,
+					isGameAFK = false,
+					isGameBusy = false,
+					isInCurrentRegion = false,
+					isOnline = true,
+					isWowMobile = false,
+					playerGuid = "Example12345678",
+					raceName = "Blood Elf",
+					realmDisplayName = "Tarren Mill",
+					realmID = 1,
+					realmName = "TarrenMill",
+					regionID = 1,
+					richPresence = "Oribos - TarrenMill",
+					wowProjectID = _G.WOW_PROJECT_MAINLINE,
+				}
+				friendWrapper.type = _G.FRIENDS_BUTTON_TYPE_BNET ---@diagnostic disable-line: undefined-field
+				friendWrapper.data = data
+			else
+				---@type FriendInfo
+				local data = {
+					-- FriendInfo
+					afk = false,
+					area = "Oribos",
+					className = "Mage",
+					connected = true,
+					dnd = false,
+					guid = "Example12345678",
+					level = maxLevel,
+					mobile = false,
+					name = "Carl",
+					notes = "This is a sample friend note.",
+					rafLinkType = _G.Enum.RafLinkType.Friend,
+				}
+				friendWrapper.type = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disable-line: undefined-field
+				friendWrapper.data = data
+			end
+			return Parse.Format(friendWrapper, format)
+		end
+
+		local function ConvertToText(raw)
+			return raw:gsub("|", "||")
+		end
+
+		local function ConvertToFormat(raw)
+			return raw:gsub("||", "|")
+		end
+
+		-- TODO: WIP
+		local varNamesBNet = [[TODO BNet]]
+		local varNamesWoW = [[TODO WoW]]
+
+		local optionGroups = {
+			{
+				label = "Format",
+				description = "Customize the appearance of your friends list.\n\nList of variables for BNet friends:  " ..
+					varNamesBNet ..
+					"\n\nList of variables for World of Warcraft friends:  " ..
+					varNamesWoW ..
+					"\n\nSyntax examples:\n  [=accountName||name]\n  [if=battleTag][=battleTag][if=characterName] - [=characterName][/if][/if]\n  [color=class][=characterName||name][/color]\n  [color=level][=level][/color]\n",
+				options = {
+					{
+						text = true,
+						label = "",
+						description = "",
+						key = "format"
+					},
+					{
+						paragraph = true,
+						example1 = true,
+						label = "",
+						description = ""
+					},
+					{
+						paragraph = true,
+						example2 = true,
+						label = "",
+						description = ""
+					}
+				}
+			}
+		}
+
+		local handlers
+
+		handlers = {
+			panel = {
+				okay = function()
+				end,
+				cancel = function()
+				end,
+				default = function()
+					_G[format("%sDB", addonName)] = nil
+					_G.ReloadUI()
+				end,
+				refresh = function()
+					for i = 1, #loaded.widgets do
+						local widget = loaded.widgets[i]
+						if type(widget.refresh) == "function" then
+							widget.refresh(widget)
+						end
+					end
+				end
+			},
+			option = {
+				default = {
+					update = function(self)
+					end,
+					click = function(self)
+						handlers.panel.refresh()
+					end,
+				},
+				number = {
+					update = function(self)
+					end,
+					save = function(self)
+						handlers.panel.refresh()
+					end
+				},
+				text = {
+					update = function(self)
+						if self:HasFocus() then
+							return
+						end
+						self:SetText(ConvertToText(Config.format))
+						self:SetCursorPosition(0)
+					end,
+					save = function(self)
+						Config.format = ConvertToFormat(self:GetText())
+						handlers.panel.refresh()
+					end,
+					example = function(self)
+						local temp = "\n"
+						if self.option.example1 then
+							temp = temp .. "\n"
+						end
+						local format = self:GetParent():GetParent():GetParent().widgets[1]
+						temp = temp .. ExampleFriend(ConvertToFormat(format:GetText()), self.option.example1)
+						self:SetText(temp)
+					end
+				},
+			},
+			group = {
+				update = function(self)
+				end,
+				click = function(self)
+					handlers.panel.refresh()
+				end
+			},
+		}
+
+		local function CreateTitle(panel, name, version)
+
+			local title = CreateFrame("Frame", "$parentTitle" .. unique, panel)
+			unique = unique + 1
+			title:SetPoint("TOPLEFT", panel, "TOPLEFT")
+			title:SetPoint("TOPRIGHT", panel, "TOPRIGHT")
+			title:SetHeight(70)
+
+			title.text = title:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+			title.text:SetJustifyH("CENTER")
+			title.text:SetPoint("TOP", title, "TOP", 0, -20)
+			title.text:SetText(name)
+
+			title.version = title:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+			title.version:SetJustifyH("CENTER");
+			title.version:SetPoint("TOP", title, "TOP", 0, -46)
+			title.version:SetText(version)
+
+			return title
+
+		end
+
+		local function CreateHeader(panel, anchor, text)
+
+			local header = CreateFrame("Frame", "$parentHeader" .. unique, anchor:GetParent() or anchor)
+			unique = unique + 1
+			header:SetHeight(18)
+
+			if anchor:GetObjectType() == "Frame" then
+				header:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT")
+				header:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT")
+			else
+				header:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", -10, 0)
+				header:SetPoint("TOPRIGHT", panel, "BOTTOMRIGHT")
+			end
+
+			header.label = header:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+			header.label:SetPoint("TOP")
+			header.label:SetPoint("BOTTOM")
+			header.label:SetJustifyH("CENTER")
+			header.label:SetText(text)
+
+			header.left = header:CreateTexture(nil, "BACKGROUND")
+			header.left:SetHeight(8)
+			header.left:SetPoint("LEFT", 10, 0)
+			header.left:SetPoint("RIGHT", header.label, "LEFT", -5, 0) -- TODO: repeat at the end?
+			header.left:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+			header.left:SetTexCoord(.81, .94, .5, 1)
+
+			header.right = header:CreateTexture(nil, "BACKGROUND")
+			header.right:SetHeight(8)
+			header.right:SetPoint("RIGHT", -10, 0)
+			header.right:SetPoint("LEFT", header.label, "RIGHT", 5, 0)
+			header.right:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+			header.right:SetTexCoord(.81, .94, .5, 1)
+
+			return header
+
+		end
+
+		local function CreateParagraph(anchor, text)
+
+			local MAX_HEIGHT = 255
+
+			local header = CreateFrame("Frame", "$parentParagraph" .. unique, anchor:GetParent() or anchor)
+			unique = unique + 1
+			header:SetHeight(MAX_HEIGHT)
+
+			header:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT")
+			header:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT")
+
+			header.label = header:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+			header.label:SetPoint("TOPLEFT", 10, -5)
+			header.label:SetPoint("BOTTOMRIGHT", -10, 5)
+			header.label:SetJustifyH("LEFT")
+			header.label:SetJustifyV("TOP")
+			header.label:SetText(text)
+			header.label:SetHeight(MAX_HEIGHT)
+
+			header.label:SetWordWrap(true)
+			header.label:SetNonSpaceWrap(true)
+			header.label:SetMaxLines(20)
+
+			header:SetScript("OnUpdate", function()
+				if header:GetHeight() < MAX_HEIGHT and header.label:GetHeight() == header:GetHeight() then
+					header:SetScript("OnUpdate", nil)
+				end
+				local height = header.label:GetStringHeight() + 5
+				header.label:SetHeight(height)
+				header:SetHeight(height)
+			end)
+
+			-- TODO: OBSCOLETE?
+			header:SetScript("OnSizeChanged", function()
+				local height = header.label:GetStringHeight() + 5
+				header.label:SetHeight(height)
+				header:SetHeight(height)
+			end)
+
+			-- header:SetScript("OnHide", function()
+			-- 	header:SetHeight(MAX_HEIGHT)
+			-- 	header.label:SetHeight(MAX_HEIGHT)
+			-- end)
+
+			return header
+
+		end
+
+		local function CreateCheckbox(anchor, text, tooltip)
+
+			local checkbox = CreateFrame("CheckButton", "$parentCheckbox" .. unique, anchor:GetParent() or anchor, "InterfaceOptionsCheckButtonTemplate")
+			unique = unique + 1
+			checkbox.Text:SetText(text)
+			checkbox.tooltipText = tooltip
+
+			if anchor:GetObjectType() == "Frame" then
+				checkbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
+			else
+				checkbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+			end
+
+			return checkbox
+
+		end
+
+		local function CreateInput(anchor, kind, text, tooltip)
+
+			local editbox = CreateFrame("EditBox", "$parentEditBox" .. unique, anchor:GetParent() or anchor, "InputBoxTemplate")
+			unique = unique + 1
+			editbox:SetFontObject("GameFontHighlight")
+			editbox:SetSize(160, 22)
+			editbox:SetAutoFocus(false)
+			editbox:SetHyperlinksEnabled(false)
+			editbox:SetMultiLine(false)
+			editbox:SetIndentedWordWrap(false)
+			editbox:SetMaxLetters(255)
+			editbox.tooltipText = tooltip
+
+			if kind == "number" then
+				editbox:SetMaxLetters(4)
+				editbox:SetNumeric(true)
+				editbox:SetNumber(text)
+			else
+				editbox:SetText(text)
+			end
+
+			editbox:SetScript("OnEscapePressed", function() editbox:ClearFocus() end)
+			editbox:SetScript("OnEnterPressed", function() editbox:ClearFocus() end)
+			editbox:SetScript("OnEditFocusLost", handlers.panel.refresh)
+
+			editbox:SetScript("OnEnter", function() if editbox.tooltipText then GameTooltip:SetOwner(editbox, "ANCHOR_RIGHT") GameTooltip:SetText(editbox.tooltipText, nil, nil, nil, nil, true) GameTooltip:Show() end end)
+			editbox:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+			if anchor:GetObjectType() == "Frame" then
+				editbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
+			else
+				editbox:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+			end
+
+			if kind == "text" then
+				editbox:SetHeight(200)
+				editbox:SetMultiLine(true)
+				editbox:SetMaxLetters(1024)
+
+				editbox:SetPoint("RIGHT", -8, 0)
+
+				editbox.Left:Hide()
+				editbox.Middle:Hide()
+				editbox.Right:Hide()
+
+				editbox.Backdrop = CreateFrame("Frame", nil, editbox, false and BackdropTemplateMixin and "BackdropTemplate") -- TODO: 9.0
+				editbox.Backdrop:SetPoint("TOPLEFT", editbox, "TOPLEFT", -8, 8)
+				editbox.Backdrop:SetPoint("BOTTOMRIGHT", editbox, "BOTTOMRIGHT", 4, -10)
+
+				if editbox.Backdrop.SetBackdrop then
+					editbox.Backdrop:SetBackdrop({
+						bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+						edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+						tile = true, tileSize = 16, edgeSize = 16,
+						insets = { left = 4, right = 4, top = 4, bottom = 4 }
+					})
+					editbox.Backdrop:SetBackdropColor(0, 0, 0, 1)
+				end
+
+				editbox.Backdrop:SetFrameLevel(5)
+				editbox:SetFrameLevel(10)
+			end
+
+			return editbox
+
+		end
+
+		local function CreateButton(anchor, text, tooltip)
+
+			local button = CreateFrame("Button", "$parentButton" .. unique, anchor:GetParent() or anchor, "UIPanelButtonTemplate")
+			unique = unique + 1
+			button:SetSize(80, 22)
+			button:SetText(text)
+			button.tooltipText = "|cffffd100" .. tooltip .. "|r"
+
+			if anchor:GetObjectType() == "Frame" then
+				button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
+			else
+				button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+			end
+
+			return button
+
+		end
+
+		local function CreateDropdownOptions(key)
+
+			local temp = {}
+
+			if key == "ITEM_QUALITY_PLAYER" or key == "ITEM_QUALITY_GROUP" or key == "ITEM_QUALITY_RAID" then
+				-- table.insert(temp, { value = -1, label = NONE, r = 1, g = 1, b = 1, hex = "ffffffff" })
+
+				for i = 0, 7 do -- Poor to Artifact (8 is WoW Token)
+					local r, g, b, hex = GetItemQualityColor(i)
+
+					table.insert(temp, { value = i, label = _G["ITEM_QUALITY" .. i .. "_DESC"], r = r, g = g, b = b, hex = hex })
+				end
+			end
+
+			return temp
+
+		end
+
+		local function CreateDropdownInfoSetValue(option)
+
+			-- ns.config:write(option.arg2, option.value)
+			option.arg1:SetValue(option.value)
+			handlers.panel.refresh()
+
+		end
+
+		local function CreateDropdownInitialize(dropdown)
+
+			local key = dropdown.option.key
+			local selectedValue = UIDropDownMenu_GetSelectedValue(dropdown)
+			local info = UIDropDownMenu_CreateInfo()
+			info.func = CreateDropdownInfoSetValue
+			info.arg1 = dropdown
+			info.arg2 = key
+
+			for i = 1, #dropdown.option.options do
+				local option = dropdown.option.options[i]
+
+				info.colorCode = "|c" .. option.hex
+				info.text = option.label
+				info.value = option.value
+				info.checked = info.value == selectedValue
+
+				UIDropDownMenu_AddButton(info)
+			end
+
+		end
+
+		local function CreateDropdownSetValue(dropdown, value)
+			dropdown.value = value
+			UIDropDownMenu_SetSelectedValue(dropdown, value)
+		end
+
+		local function CreateDropdownGetValue(dropdown)
+			return UIDropDownMenu_GetSelectedValue(dropdown)
+		end
+
+		local function CreateDropdownRefreshValue(dropdown)
+			UIDropDownMenu_Initialize(dropdown, CreateDropdownInitialize)
+			UIDropDownMenu_SetSelectedValue(dropdown, dropdown.value)
+		end
+
+		local function CreateDropdown(anchor, option, text, tooltip)
+
+			local container = CreateFrame("ScrollFrame", "$parentContainer" .. unique, anchor:GetParent() or anchor)
+			unique = unique + 1
+
+			local dropdown = CreateFrame("Frame", "$parentDropdown" .. unique, container, "UIDropDownMenuTemplate")
+			container.dropdown = dropdown
+			unique = unique + 1
+			dropdown:SetPoint("TOPLEFT", -12, -20)
+
+			local w, h = dropdown:GetSize()
+			container:SetSize(w, h + 18)
+
+			dropdown.label = dropdown:CreateFontString(nil, "BACKGROUND", "GameFontHighlight")
+			dropdown.label:SetPoint("BOTTOMLEFT", "$parent", "TOPLEFT", 16, 3)
+			dropdown.label:SetText(text)
+
+			dropdown.option = option
+			dropdown.defaultValue = 0
+			-- dropdown.value = ns.config:read(option.key, 0)
+			dropdown.oldValue = dropdown.value
+			dropdown.tooltip = tooltip
+
+			dropdown.SetValue = CreateDropdownSetValue
+			dropdown.GetValue = CreateDropdownGetValue
+			dropdown.RefreshValue = CreateDropdownRefreshValue
+
+			UIDropDownMenu_SetWidth(dropdown, 90)
+			UIDropDownMenu_Initialize(dropdown, CreateDropdownInitialize)
+			UIDropDownMenu_SetSelectedValue(dropdown, dropdown.value)
+
+			if anchor:GetObjectType() == "Frame" then
+				container:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 10, -10)
+			else
+				container:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+			end
+
+			return container
+
+		end
+
+		local function CreatePanel()
+
+			local panel = CreateFrame("Frame", addonName .. "Panel" .. unique, _G.InterfaceOptionsFramePanelContainer)
+			unique = unique + 1
+			panel.widgets = {}
+			panel.name = addonName
+
+			-- add the standard interface buttons
+			for key, func in pairs(handlers.panel) do
+				panel[key] = func
+			end
+
+			-- create scroll, bar, and content frame
+			do
+
+				local PANEL_SCROLL_HEIGHT = 0 -- TODO: dynamic max?
+
+				panel.scroll = CreateFrame("ScrollFrame", nil, panel)
+				panel.scroll:SetPoint("TOPLEFT", 10, -10)
+				panel.scroll:SetPoint("BOTTOMRIGHT", -26, 10)
+
+				panel.scroll.bar = CreateFrame("Slider", nil, panel.scroll, "UIPanelScrollBarTemplate")
+				panel.scroll.bar.scrollStep = 50
+				panel.scroll.bar:SetPoint("TOPLEFT", panel, "TOPRIGHT", -22, -26)
+				panel.scroll.bar:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", 22, 26)
+				panel.scroll.bar:SetMinMaxValues(0, PANEL_SCROLL_HEIGHT)
+				panel.scroll.bar:SetValueStep(panel.scroll.bar.scrollStep)
+				panel.scroll.bar:SetValue(0)
+				panel.scroll.bar:SetWidth(16)
+				panel.scroll.bar:SetScript("OnValueChanged", function(_, value) panel.scroll:SetVerticalScroll(value) end)
+
+				panel.scroll:EnableMouse(true)
+				panel.scroll:EnableMouseWheel(true)
+				panel.scroll:SetScript("OnMouseWheel", function(_, delta) local a, b = panel.scroll.bar:GetMinMaxValues() local value = min(b, max(a, panel.scroll:GetVerticalScroll() - (delta * panel.scroll.bar.scrollStep))) panel.scroll:SetVerticalScroll(value) panel.scroll.bar:SetValue(value) end)
+
+				panel.content = CreateFrame("Frame", nil, panel.scroll)
+				panel.scroll:SetScript("OnSizeChanged", function(_, width, height) panel.content:SetSize(width, height) end)
+
+				panel.scroll:SetScrollChild(panel.content)
+
+				if PANEL_SCROLL_HEIGHT <= 0 then
+					panel.scroll.bar:Hide()
+				end
+
+			end
+
+			-- add widgets to the content frame
+			do
+
+				local last = CreateTitle(panel.content, addonName, GetAddOnMetadata(addonName, "Version"))
+
+				-- add options
+				do
+
+					for i = 1, #optionGroups do
+
+						local optionGroup = optionGroups[i]
+
+						last = CreateHeader(panel.content, last, optionGroup.label)
+
+						if optionGroup.description then
+							last = CreateParagraph(last, optionGroup.description)
+						end
+
+						for j = 1, #optionGroup.options do
+
+							local option = optionGroup.options[j]
+
+							if option.checkbox then
+								last = CreateCheckbox(last, option.label, option.description)
+								last.option = option
+								last.refresh = handlers.option.default.update
+								last:SetScript("OnClick", handlers.option.default.click)
+								table.insert(panel.widgets, last)
+
+							elseif option.number then
+								last = CreateInput(last, "number", option.label, option.description)
+								last.option = option
+								last.refresh = handlers.option.number.update
+								last:SetScript("OnEnterPressed", function(self, ...) handlers.option.number.save(self, ...) self:ClearFocus() end)
+								table.insert(panel.widgets, last)
+
+							elseif option.text then
+								last = CreateInput(last, "text", option.label, option.description)
+								last.option = option
+								last.refresh = handlers.option.text.update
+								last:SetScript("OnEnterPressed", function(self, ...) handlers.option.text.save(self, ...) self:ClearFocus() end)
+								last:SetScale(1.5)
+								table.insert(panel.widgets, last)
+
+							elseif option.paragraph then
+								last = CreateInput(last, "text", option.label, option.description)
+								last.option = option
+								last:SetScale(1.5)
+								last.Backdrop:Hide()
+								last:Disable()
+								last:SetScript("OnUpdate", handlers.option.text.example)
+								table.insert(panel.widgets, last)
+
+							elseif option.dropdown then
+								option.options = CreateDropdownOptions(option.key)
+								last = CreateDropdown(last, option, option.label, option.description)
+								last.option = option
+								last.refresh = function(last) last.dropdown:RefreshValue() end
+								table.insert(panel.widgets, last)
+							end
+
+						end
+
+					end
+
+				end
+
+			end
+
+			-- refresh when panel is shown
+			panel:SetScript("OnShow", handlers.panel.refresh)
+
+			return panel
+
+		end
+
+		local panel = CreatePanel()
+		InterfaceOptions_AddCategory(panel)
+
 	end
 
 	function Init()
@@ -792,12 +1413,15 @@ local Frame do
 	Frame = CreateFrame("Frame") ---@type AddOnFrame
 	Frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
 
+	local loaded = false
+
 	---@param event string
 	---@param name string
 	function Frame:ADDON_LOADED(event, name)
-		if name ~= addonName then
+		if loaded or name ~= addonName then
 			return
 		end
+		loaded = true
 		Frame:UnregisterEvent(event)
 		Init()
 	end

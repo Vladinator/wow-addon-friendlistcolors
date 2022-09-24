@@ -329,6 +329,8 @@ end
 local Friends do
 
 	---@class BNetAccountInfoExtended : BNetGameAccountInfo, BNetAccountInfo
+	---@field bnet boolean
+	---@field isBNet boolean
 
 	Friends = {}
 
@@ -397,17 +399,31 @@ local Friends do
 	---@param data BNetAccountInfoExtended|BNetAccountInfo|FriendInfo
 	---@param isBNet? boolean
 	function Friends.AddFieldAlias(data, isBNet)
-		if isBNet then
-			-- data.name = data.characterName
-			data.characterLevel = data.level
-			data.area = data.areaName
-		else
-			-- data.characterName = data.name
-			data.level = data.characterLevel
-			data.areaName = data.area
+		---@param ... string
+		---@return string?, string?, string?
+		local function first(...)
+			local temp
+			for _, v in ipairs({...}) do
+				temp = data[v]
+				if temp ~= nil then
+					return temp, temp, temp
+				end
+			end
+			return temp, temp, temp
 		end
-		data.class = data.className
-		data.race = data.raceName
+		isBNet = not not isBNet
+		data.bnet = isBNet
+		data.isBNet = isBNet
+		-- data.name, data.characterName = first("characterName", "name") ---@diagnostic disable-line: assign-type-mismatch
+		data.level, data.characterLevel = first("characterLevel", "level") ---@diagnostic disable-line: assign-type-mismatch
+		data.class, data.className = first("className", "class") ---@diagnostic disable-line: assign-type-mismatch
+		data.race, data.raceName = first("raceName", "race") ---@diagnostic disable-line: assign-type-mismatch
+		data.faction, data.factionName = first("factionName", "faction") ---@diagnostic disable-line: assign-type-mismatch
+		data.area, data.areaName = first("areaName", "area") ---@diagnostic disable-line: assign-type-mismatch
+		data.connected, data.isOnline = first("isOnline", "connected") ---@diagnostic disable-line: assign-type-mismatch
+		data.mobile, data.isWowMobile = first("isWowMobile", "mobile") ---@diagnostic disable-line: assign-type-mismatch
+		data.afk, data.isAFK, data.isGameAFK = first("isGameAFK", "isAFK", "afk") ---@diagnostic disable-line: assign-type-mismatch
+		data.dnd, data.isDND, data.isGameBusy = first("isGameBusy", "isDND", "dnd") ---@diagnostic disable-line: assign-type-mismatch
 	end
 
 	---@alias FriendType number `2`=`FRIENDS_BUTTON_TYPE_BNET` and `3`=`FRIENDS_BUTTON_TYPE_WOW`
@@ -476,9 +492,9 @@ local Friends do
 end
 
 local Config = {
-	format = "[if=level][color=level]L[=level][/color] [/if][color=class][=accountName|name][if=characterName] ([=characterName])[/if][/color]",
-	-- format = "[if=level][color=level]L[=level][/color] [/if][color=class][=accountName|characterName|name][/color]",
-	-- format = "[if=level][color=level]Lv. [=level][/color] [/if][color=class][if=characterName][=characterName] ([=accountName|battleTag])[/if][if~=characterName][=accountName|battleTag|name][/if][if=race] [=race][/if][if=class] [=class][/if][/color]",
+	format = "[if=level][color=level]L[=level] [/color][/if][color=class][=accountName|name][if=characterName] ([=characterName])[/if][/color]",
+	-- format = "[if=level][color=level]L[=level] [/color][/if][color=class][=accountName|characterName|name][/color]",
+	-- format = "[if=level][color=level]Lv. [=level] [/color][/if][color=class][if=characterName][=characterName] ([=accountName|battleTag])[/if][if~=characterName][=accountName|battleTag|name][/if][if=race] [=race][/if][if=class] [=class][/if][/color]",
 }
 
 local Init do
@@ -857,6 +873,7 @@ local Init do
 				friendWrapper.type = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disable-line: undefined-field
 				friendWrapper.data = data
 			end
+			Friends.AddFieldAlias(friendWrapper.data, isBNet)
 			return Parse.Format(friendWrapper, format)
 		end
 
@@ -873,17 +890,18 @@ local Init do
 		end
 
 		local varNamesBNet = {
+			"bnet/isBNet",
 			"accountName",
 			"battleTag",
-			"characterName",
-			"characterLevel",
-			"className",
-			"areaName",
+			"name/characterName",
+			"level/characterLevel",
+			"class/className",
+			"area/areaName",
 			"note",
 			"customMessage",
 			"richPresence",
-			"raceName",
-			"factionName",
+			"race/raceName",
+			"faction/factionName",
 			"realmName",
 			"realmDisplayName",
 			"canSummon",
@@ -891,25 +909,31 @@ local Init do
 			"isFavorite",
 			"isBattleTagFriend",
 			"appearOffline",
-			"isOnline",
+			"isOnline/connected",
 			"isWowMobile",
-			"isGameAFK",
-			"isGameBusy",
-			"isAFK",
-			"isDND",
+			"isGameAFK/isAFK/afk",
+			"isGameBusy/isDND/dnd",
 		}
 
 		local varNamesWoW = {
 			"name",
 			"level",
-			"className",
+			"class/className",
 			"area",
 			"notes",
-			"connected",
-			"mobile",
-			"afk",
-			"dnd",
+			"connected/isOnline",
+			"mobile/isWowMobile",
+			"afk/isAFK/isGameAFK",
+			"dnd/isDND/isGameBusy",
 		}
+
+		local syntaxExamples = [[
+  [=accountName||name]
+  [if=bnet][=battleTag] - [=name][/if]
+  [if~=bnet][=name][/if]
+  [color=class][=characterName||name][/color]
+  [color=level][=level][/color]
+]]
 
 		local optionGroups = {
 			{
@@ -918,7 +942,7 @@ local Init do
 					"|cffFFFF00" .. table.concat(varNamesBNet, "|r  |cffFFFF00") .. "|r" ..
 					"\n\nList of variables for World of Warcraft friends:  " ..
 					"|cffFFFF00" .. table.concat(varNamesWoW, "|r  |cffFFFF00") .. "|r" ..
-					"\n\nSyntax examples:\n  [=accountName||name]\n  [if=battleTag][=battleTag][if=characterName] - [=characterName][/if][/if]\n  [color=class][=characterName||name][/color]\n  [color=level][=level][/color]\n",
+					"\n\nSyntax examples:\n" .. syntaxExamples,
 				options = {
 					{
 						text = true,

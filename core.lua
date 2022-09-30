@@ -2,6 +2,8 @@ local GameTooltip = _G.GameTooltip ---@diagnostic disable-line: undefined-field
 local InterfaceOptions_AddCategory = _G.InterfaceOptions_AddCategory ---@diagnostic disable-line: undefined-field
 local InterfaceOptionsFramePanelContainer = _G.InterfaceOptionsFramePanelContainer or _G.SettingsPanel ---@diagnostic disable-line: undefined-field
 local ReloadUI = _G.ReloadUI ---@diagnostic disable-line: undefined-field
+local FRIENDS_BUTTON_TYPE_BNET = _G.FRIENDS_BUTTON_TYPE_BNET ---@diagnostic disable-line: undefined-field
+local FRIENDS_BUTTON_TYPE_WOW = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disable-line: undefined-field
 
 local addonName = ... ---@type string
 
@@ -186,10 +188,10 @@ local Parse do
 
 		if not out then
 			---@diagnostic disable-next-line: undefined-field
-			local offline = not friendWrapper.data[friendWrapper.type == _G.FRIENDS_BUTTON_TYPE_BNET and "isOnline" or "connected"]
+			local offline = not friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "isOnline" or "connected"]
 			if offline then
 				out = Color.Gray
-			elseif friendWrapper.type == _G.FRIENDS_BUTTON_TYPE_BNET then ---@diagnostic disable-line: undefined-field
+			elseif friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET then ---@diagnostic disable-line: undefined-field
 				out = Color.BNet
 			else
 				out = Color.WoW
@@ -230,7 +232,7 @@ local Parse do
 				if field == "accountName" or field == "name" then
 
 					---@diagnostic disable-next-line: undefined-field
-					local note = friendWrapper.data[friendWrapper.type == _G.FRIENDS_BUTTON_TYPE_BNET and "note" or "notes"] ---@type string?
+					local note = friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "note" or "notes"] ---@type string?
 					local alias = Parse.Note(note)
 
 					if alias then
@@ -437,12 +439,12 @@ local Friends do
 	---@return FriendWrapper?
 	function Friends.PackageFriend(buttonType, id)
 		local temp ---@type FriendWrapper
-		if buttonType == _G.FRIENDS_BUTTON_TYPE_BNET then ---@diagnostic disable-line: undefined-field
+		if buttonType == FRIENDS_BUTTON_TYPE_BNET then ---@diagnostic disable-line: undefined-field
 			temp = {
 				type = buttonType,
 				data = Friends.PackageFriendBNetCharacter(Friends.BNGetFriendInfo(id), id),
 			}
-		elseif buttonType == _G.FRIENDS_BUTTON_TYPE_WOW then ---@diagnostic disable-line: undefined-field
+		elseif buttonType == FRIENDS_BUTTON_TYPE_WOW then ---@diagnostic disable-line: undefined-field
 			temp = {
 				type = buttonType,
 				data = Friends.GetFriendInfo(id),
@@ -507,7 +509,8 @@ local Init do
 
 	local function InitAPI()
 
-		local SetText ---@type fun(self: Button, text?: any)
+		-- mutex lock when setting text to avoid recursion
+		local isSettingText = false
 
 		---@class ListFrameButton : Button
 		---@field buttonType number
@@ -517,19 +520,25 @@ local Init do
 
 		---@param self ListFrameButton
 		---@param ... any
-		local function UpdateButtonName(self, ...)
+		local function SetTextHook(self, ...)
+			if isSettingText then
+				return
+			end
 			---@diagnostic disable-next-line: assign-type-mismatch
 			local button = self:GetParent() ---@type ListFrameButton
 			local buttonType, id = button.buttonType, button.id
-			if buttonType == _G.FRIENDS_BUTTON_TYPE_BNET or buttonType == _G.FRIENDS_BUTTON_TYPE_WOW then ---@diagnostic disable-line: undefined-field
-				local friendWrapper = Friends.PackageFriend(buttonType, id)
-				if friendWrapper then
-					-- button.gameIcon:SetTexture("Interface\\Buttons\\ui-paidcharactercustomization-button")
-					-- button.gameIcon:SetTexCoord(8/128, 55/128, 72/128, 119/128)
-					return SetText(self, Parse.Format(friendWrapper, Config.format))
-				end
+			if buttonType ~= FRIENDS_BUTTON_TYPE_BNET and buttonType ~= FRIENDS_BUTTON_TYPE_WOW then
+				return
 			end
-			return SetText(self, ...)
+			local friendWrapper = Friends.PackageFriend(buttonType, id)
+			if not friendWrapper then
+				return
+			end
+			-- button.gameIcon:SetTexture("Interface\\Buttons\\ui-paidcharactercustomization-button")
+			-- button.gameIcon:SetTexCoord(8/128, 55/128, 72/128, 119/128)
+			isSettingText = true
+			self:SetText(Parse.Format(friendWrapper, Config.format))
+			isSettingText = false
 		end
 
 		local HookButtons do
@@ -541,10 +550,7 @@ local Init do
 					local button = buttons[i]
 					if not hookedButtons[button] then
 						hookedButtons[button] = true
-						if not SetText then
-							SetText = button.name.SetText
-						end
-						button.name.SetText = UpdateButtonName
+						hooksecurefunc(button.name, "SetText", SetTextHook)
 					end
 				end
 			end
@@ -724,9 +730,6 @@ local Init do
 
 		if _G.QuickJoinToastButton then ---@diagnostic disable-line: undefined-field
 
-			---@diagnostic disable-next-line: undefined-field
-			local SetText = getmetatable(_G.QuickJoinToastButton.Toast.Text).__index.SetText ---@type fun(self: Button, text: string)
-
 			---@class QuickJoinFrameButtonEntryDisplayMember : Button
 
 			---@class QuickJoinFrameButtonEntry
@@ -748,8 +751,7 @@ local Init do
 					local member = self.Members[i]
 					local text = member:GetText()
 					if text and text ~= "" then
-						local newText = Friends.ReplaceName(text)
-						SetText(member, newText)
+						member:SetText(Friends.ReplaceName(text))
 					end
 				end
 			end
@@ -784,18 +786,22 @@ local Init do
 				QuickJoinHookButtons(quickJoinScrollFrame.buttons)
 			end
 
+			-- mutex lock when setting text to avoid recursion
+			local isToastSettingText = false
+
 			---@param self Button
 			---@param text string
-			local function ToastSetText(self, text)
-				if not text or text == "" then
+			local function ToastSetTextHook(self, text)
+				if isToastSettingText or (not text) or text == "" then
 					return
 				end
-				local newText = Friends.ReplaceName(text)
-				SetText(self, newText)
+				isToastSettingText = true
+				self:SetText(Friends.ReplaceName(text))
+				isToastSettingText = false
 			end
 
-			hooksecurefunc(_G.QuickJoinToastButton.Toast.Text, "SetText", ToastSetText) ---@diagnostic disable-line: undefined-field
-			hooksecurefunc(_G.QuickJoinToastButton.Toast2.Text, "SetText", ToastSetText) ---@diagnostic disable-line: undefined-field
+			hooksecurefunc(_G.QuickJoinToastButton.Toast.Text, "SetText", ToastSetTextHook) ---@diagnostic disable-line: undefined-field
+			hooksecurefunc(_G.QuickJoinToastButton.Toast2.Text, "SetText", ToastSetTextHook) ---@diagnostic disable-line: undefined-field
 
 		end
 
@@ -852,7 +858,7 @@ local Init do
 					richPresence = "Oribos - TarrenMill",
 					wowProjectID = _G.WOW_PROJECT_MAINLINE,
 				}
-				friendWrapper.type = _G.FRIENDS_BUTTON_TYPE_BNET ---@diagnostic disable-line: undefined-field
+				friendWrapper.type = FRIENDS_BUTTON_TYPE_BNET ---@diagnostic disable-line: undefined-field
 				friendWrapper.data = data
 			else
 				---@type FriendInfo
@@ -870,7 +876,7 @@ local Init do
 					notes = "This is a sample friend note.",
 					rafLinkType = _G.Enum.RafLinkType.Friend,
 				}
-				friendWrapper.type = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disable-line: undefined-field
+				friendWrapper.type = FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disable-line: undefined-field
 				friendWrapper.data = data
 			end
 			Friends.AddFieldAlias(friendWrapper.data, isBNet)

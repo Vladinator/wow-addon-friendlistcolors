@@ -1213,8 +1213,8 @@ local Init do
 			end
 
 			if kind == "text" then
-				editbox:SetHeight(200)
-				editbox:SetMultiLine(true)
+				editbox:SetHeight(128)
+				editbox:SetMultiLine(false)
 				editbox:SetMaxLetters(1024)
 
 				editbox:SetPoint("RIGHT", -8, 0)
@@ -1223,7 +1223,7 @@ local Init do
 				editbox.Middle:Hide()
 				editbox.Right:Hide()
 
-				editbox.Backdrop = CreateFrame("Frame", nil, editbox, false and BackdropTemplateMixin and "BackdropTemplate") -- TODO: 9.0
+				editbox.Backdrop = CreateFrame("Frame", nil, editbox, BackdropTemplateMixin and "BackdropTemplate")
 				editbox.Backdrop:SetPoint("TOPLEFT", editbox, "TOPLEFT", -8, 8)
 				editbox.Backdrop:SetPoint("BOTTOMRIGHT", editbox, "BOTTOMRIGHT", 4, -10)
 

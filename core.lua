@@ -889,9 +889,10 @@ local Init do
 			return (raw:gsub("|", "||"))
 		end
 
-		---@param raw string
+		---@param raw any
 		---@return string
 		local function ConvertToFormat(raw)
+			if type(raw) ~= "string" then return "" end
 			return (raw:gsub("||", "|"))
 		end
 
@@ -967,7 +968,13 @@ local Init do
 						example2 = true,
 						label = "",
 						description = ""
-					}
+					},
+					{
+						paragraph = true,
+						reminder = true,
+						label = "",
+						description = ""
+					},
 				}
 			}
 		}
@@ -1017,7 +1024,9 @@ local Init do
 						self:SetCursorPosition(0)
 					end,
 					save = function(self)
-						Config.format = ConvertToFormat(self:GetText())
+						local format = ConvertToFormat(self:GetText())
+						if format == "" then return self:SetText(Config.format) end
+						Config.format = format
 						handlers.panel.refresh()
 					end,
 					example = function(self)
@@ -1028,7 +1037,17 @@ local Init do
 						local format = self:GetParent():GetParent():GetParent().widgets[1]
 						temp = temp .. ExampleFriend(ConvertToFormat(format:GetText()), self.option.example1)
 						self:SetText(temp)
-					end
+					end,
+					focusGain = function(self)
+						optionGroups[1].options[4].widget:SetText("\r\n|cffFFFF00Remember to press Enter to save your changes!|r")
+						self.backup = Config.format
+					end,
+					focusLost = function(self, cancel)
+						optionGroups[1].options[4].widget:SetText("")
+						if not cancel then return end
+						Config.format = self.backup
+						handlers.option.text.update(optionGroups[1].options[1].widget)
+					end,
 				},
 			},
 			group = {
@@ -1214,7 +1233,7 @@ local Init do
 
 			if kind == "text" then
 				editbox:SetHeight(128)
-				editbox:SetMultiLine(false)
+				editbox:SetMultiLine(true)
 				editbox:SetMaxLetters(1024)
 
 				editbox:SetPoint("RIGHT", -8, 0)
@@ -1318,19 +1337,26 @@ local Init do
 
 							if option.text then
 								last = CreateInput(last, "text", option.label, option.description)
+								option.widget = last
 								last.option = option
 								last.refresh = handlers.option.text.update
+								last:HookScript("OnEditFocusGained", function(self) handlers.option.text.focusGain(self) end)
+								last:HookScript("OnEditFocusLost", function(self) handlers.option.text.focusLost(self) end)
+								last:HookScript("OnEscapePressed", function(self) handlers.option.text.focusLost(self, true) end)
 								last:SetScript("OnEnterPressed", function(self, ...) handlers.option.text.save(self, ...) self:ClearFocus() end)
 								last:SetScale(1.5)
 								table.insert(panel.widgets, last)
 
 							elseif option.paragraph then
 								last = CreateInput(last, "text", option.label, option.description)
+								option.widget = last
 								last.option = option
 								last:SetScale(1.5)
 								last.Backdrop:Hide()
 								last:Disable()
-								last:SetScript("OnUpdate", handlers.option.text.example)
+								if option.example1 or option.example2 then
+									last:SetScript("OnUpdate", handlers.option.text.example)
+								end
 								table.insert(panel.widgets, last)
 							end
 

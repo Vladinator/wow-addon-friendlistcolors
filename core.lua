@@ -548,7 +548,7 @@ local Init do
 			function HookButtons(buttons)
 				for i = 1, #buttons do
 					local button = buttons[i]
-					if not hookedButtons[button] then
+					if button.name and not hookedButtons[button] then
 						hookedButtons[button] = true
 						hooksecurefunc(button.name, "SetText", SetTextHook)
 					end

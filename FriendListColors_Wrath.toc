@@ -1,0 +1,10 @@
+﻿## Interface: 30402
+## IconAtlas: socialqueuing-icon-group
+## Title: FriendListColors
+## Notes: Customize how your friends appear in your friends list!
+## Author: Vladinator
+## Version: 3.4.2.230919
+## SavedVariables: FriendListColorsDB
+## X-Curse-Project-ID: 43444
+## X-WoWI-ID: 18256
+core.lua

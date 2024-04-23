@@ -1,3 +1,5 @@
+local GetAddOnMetadata = GetAddOnMetadata or C_AddOns.GetAddOnMetadata ---@diagnostic disable-line: deprecated
+
 local GameTooltip = _G.GameTooltip ---@diagnostic disable-line: undefined-field
 local InterfaceOptions_AddCategory = _G.InterfaceOptions_AddCategory ---@diagnostic disable-line: undefined-field
 local InterfaceOptionsFramePanelContainer = _G.InterfaceOptionsFramePanelContainer or _G.SettingsPanel ---@diagnostic disable-line: undefined-field
@@ -7,6 +9,8 @@ local FRIENDS_BUTTON_TYPE_WOW = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disabl
 
 local addonName = ... ---@type string
 
+---@alias ChatTypeExtended ChatType|"BN_WHISPER"
+
 local Color do
 
 	---@param r number|ColorMixin
@@ -15,7 +19,7 @@ local Color do
 	local function ColorToHex(r, g, b)
 		if type(r) == "table" then
 			if r.r then
-				r, g, b = r.r, r.g, r.b
+				r, g, b = r.r, r.g, r.b ---@diagnostic disable-line: need-check-nil, undefined-field
 			else
 				r, g, b = unpack(r)
 			end
@@ -333,6 +337,11 @@ local Friends do
 	---@class BNetAccountInfoExtended : BNetGameAccountInfo, BNetAccountInfo
 	---@field bnet boolean
 	---@field isBNet boolean
+	---@field class number
+	---@field className string
+	---@field race number
+	---@field raceName string
+	---@field faction number
 
 	Friends = {}
 
@@ -456,7 +465,7 @@ local Friends do
 		return temp
 	end
 
-	---@param chatType ChatType
+	---@param chatType ChatTypeExtended
 	---@param name string
 	---@param lineID? number
 	function Friends.GetAlias(chatType, name, lineID)
@@ -582,7 +591,12 @@ local Init do
 					return
 				end
 
-				local header = _G[format("%sHeader", editBox:GetName())] ---@type Button
+				local editBoxName = editBox:GetName() ---@type string?
+				if not editBoxName then
+					return
+				end
+
+				local header = _G[format("%sHeader", editBoxName)] ---@type Button?
 				if not header then
 					return
 				end
@@ -621,7 +635,7 @@ local Init do
 			---@param name string
 			---@param ... any
 			local function ChatFilter_AddMessage(self, event, text, name, ...)
-				local chatType ---@type ChatType
+				local chatType ---@type ChatTypeExtended
 				if event == "CHAT_MSG_AFK" or event == "CHAT_MSG_DND" or event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" then
 					chatType = "WHISPER"
 				elseif event == "CHAT_MSG_BN_WHISPER" or event == "CHAT_MSG_BN_WHISPER_INFORM" then
@@ -1068,8 +1082,7 @@ local Init do
 		---@param version? string
 		local function CreateTitle(panel, name, version)
 
-			---@type PanelTitle
-			local title = CreateFrame("Frame", "$parentTitle" .. unique, panel) ---@diagnostic disable-line: assign-type-mismatch
+			local title = CreateFrame("Frame", "$parentTitle" .. unique, panel) ---@class PanelTitle : Frame
 			unique = unique + 1
 			title:SetPoint("TOPLEFT", panel, "TOPLEFT")
 			title:SetPoint("TOPRIGHT", panel, "TOPRIGHT")
@@ -1096,8 +1109,7 @@ local Init do
 		---@param text string
 		local function CreateHeader(panel, anchor, text)
 
-			---@type PanelHeader
-			local header = CreateFrame("Frame", "$parentHeader" .. unique, anchor:GetParent() or anchor) ---@diagnostic disable-line: assign-type-mismatch
+			local header = CreateFrame("Frame", "$parentHeader" .. unique, anchor:GetParent() or anchor) ---@class PanelHeader : Frame
 			unique = unique + 1
 			header:SetHeight(18)
 
@@ -1141,8 +1153,7 @@ local Init do
 
 			local MAX_HEIGHT = 255
 
-			---@type PanelParagraph
-			local header = CreateFrame("Frame", "$parentParagraph" .. unique, anchor:GetParent() or anchor) ---@diagnostic disable-line: assign-type-mismatch
+			local header = CreateFrame("Frame", "$parentParagraph" .. unique, anchor:GetParent() or anchor) ---@class PanelParagraph : Frame
 			unique = unique + 1
 			header:SetHeight(MAX_HEIGHT)
 
@@ -1198,8 +1209,7 @@ local Init do
 		---@param tooltip? string
 		local function CreateInput(anchor, kind, text, tooltip)
 
-			---@type PanelEditBox
-			local editbox = CreateFrame("EditBox", "$parentEditBox" .. unique, anchor:GetParent() or anchor, "InputBoxTemplate") ---@diagnostic disable-line: assign-type-mismatch
+			local editbox = CreateFrame("EditBox", "$parentEditBox" .. unique, anchor:GetParent() or anchor, "InputBoxTemplate") ---@class PanelEditBox : EditBox
 			unique = unique + 1
 			editbox:SetFontObject("GameFontHighlight")
 			editbox:SetSize(160, 22)
@@ -1266,7 +1276,7 @@ local Init do
 
 		local function CreatePanel()
 
-			local panel = CreateFrame("Frame", addonName .. "Panel" .. unique, InterfaceOptionsFramePanelContainer)
+			local panel = CreateFrame("Frame", addonName .. "Panel" .. unique, InterfaceOptionsFramePanelContainer) ---@class FriendsListColorsInterfaceOptionsPanel : Frame
 			unique = unique + 1
 			panel.widgets = {} ---@type PanelWidget[]
 			panel.name = addonName

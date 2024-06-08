@@ -9,6 +9,8 @@ local FRIENDS_BUTTON_TYPE_WOW = _G.FRIENDS_BUTTON_TYPE_WOW ---@diagnostic disabl
 
 local addonName = ... ---@type string
 
+local TIMERUNNING_MARKUP = CreateAtlasMarkup and CreateAtlasMarkup("timerunning-glues-icon-small", 9, 12)
+
 ---@alias ChatTypeExtended ChatType|"BN_WHISPER"
 
 local Color do
@@ -342,6 +344,8 @@ local Friends do
 	---@field race number
 	---@field raceName string
 	---@field faction number
+	---@field timerunner number
+	---@field timerunnerIcon string
 
 	Friends = {}
 
@@ -435,6 +439,8 @@ local Friends do
 		data.mobile, data.isWowMobile = first("isWowMobile", "mobile") ---@diagnostic disable-line: assign-type-mismatch
 		data.afk, data.isAFK, data.isGameAFK = first("isGameAFK", "isAFK", "afk") ---@diagnostic disable-line: assign-type-mismatch
 		data.dnd, data.isDND, data.isGameBusy = first("isGameBusy", "isDND", "dnd") ---@diagnostic disable-line: assign-type-mismatch
+		data.timerunner = first("timerunningSeasonID") ---@diagnostic disable-line: assign-type-mismatch
+		data.timerunnerIcon = data.timerunner and TIMERUNNING_MARKUP
 	end
 
 	---@alias FriendType number `2`=`FRIENDS_BUTTON_TYPE_BNET` and `3`=`FRIENDS_BUTTON_TYPE_WOW`
@@ -608,7 +614,7 @@ local Init do
 				end
 
 				local newName = Friends.GetAlias(chatType, name)
-				header:SetFormattedText(_G[format("CHAT_%s_SEND", chatType)], newName)
+				header:SetFormattedText(_G[format("CHAT_%s_SEND", chatType)], newName) ---@diagnostic disable-line: redundant-parameter
 
 				local headerSuffix = _G[format("%sHeaderSuffix", editBox:GetName())] ---@type Frame
 				local headerWidth = (header:GetRight() or 0) - (header:GetLeft() or 0)
@@ -829,10 +835,12 @@ local Init do
 		---@param format string
 		---@param isBNet? boolean
 		local function ExampleFriend(format, isBNet)
+			---@diagnostic disable-next-line: missing-fields
 			local friendWrapper = {} ---@type FriendWrapper
 			local maxLevel = GetMaxLevelForExpansionLevel(GetExpansionLevel())
 			if isBNet then
 				---@type BNetAccountInfoExtended
+				---@diagnostic disable-next-line: missing-fields
 				local data = {
 					accountName = "Ola Nordmann",
 					appearOffline = false,
@@ -871,6 +879,7 @@ local Init do
 					regionID = 1,
 					richPresence = "Oribos - TarrenMill",
 					wowProjectID = _G.WOW_PROJECT_MAINLINE,
+					timerunningSeasonID = 1,
 				}
 				friendWrapper.type = FRIENDS_BUTTON_TYPE_BNET ---@diagnostic disable-line: undefined-field
 				friendWrapper.data = data
@@ -934,6 +943,8 @@ local Init do
 			"isWowMobile",
 			"isGameAFK/isAFK/afk",
 			"isGameBusy/isDND/dnd",
+			"timerunner",
+			"timerunnerIcon",
 		}
 
 		local varNamesWoW = {
@@ -956,6 +967,23 @@ local Init do
   [color=level][=level][/color]
 ]]
 
+		---@class FriendsListColorsInterfaceOptionItem
+		---@field public label string
+		---@field public description string
+		---@field public key? string
+		---@field public text? boolean
+		---@field public paragraph? boolean
+		---@field public reminder? boolean
+		---@field public example1? boolean
+		---@field public example2? boolean
+		---@field public widget? PanelWidget
+
+		---@class FriendsListColorsInterfaceOption
+		---@field public label string
+		---@field public description string
+		---@field public options FriendsListColorsInterfaceOptionItem[]
+
+		---@type FriendsListColorsInterfaceOption[]
 		local optionGroups = {
 			{
 				label = "Format",
@@ -1053,11 +1081,11 @@ local Init do
 						self:SetText(temp)
 					end,
 					focusGain = function(self)
-						optionGroups[1].options[4].widget:SetText("\r\n|cffFFFF00Remember to press Enter to save your changes!|r")
+						optionGroups[1].options[4].widget:SetText("\r\n|cffFFFF00Remember to press Enter to save your changes!|r") ---@diagnostic disable-line: undefined-field
 						self.backup = Config.format
 					end,
 					focusLost = function(self, cancel)
-						optionGroups[1].options[4].widget:SetText("")
+						optionGroups[1].options[4].widget:SetText("") ---@diagnostic disable-line: undefined-field
 						if not cancel then return end
 						Config.format = self.backup
 						handlers.option.text.update(optionGroups[1].options[1].widget)
@@ -1074,6 +1102,8 @@ local Init do
 		}
 
 		---@class PanelWidget : Frame
+		---@field public option FriendsListColorsInterfaceOptionItem
+		---@field public refresh? fun(self: PanelWidget)
 
 		---@class PanelTitle : PanelWidget
 
@@ -1223,14 +1253,14 @@ local Init do
 			if kind == "number" then
 				editbox:SetMaxLetters(4)
 				editbox:SetNumeric(true)
-				editbox:SetNumber(text)
+				editbox:SetNumber(text) ---@diagnostic disable-line: param-type-mismatch
 			else
-				editbox:SetText(text)
+				editbox:SetText(text) ---@diagnostic disable-line: param-type-mismatch
 			end
 
-			editbox:SetScript("OnEscapePressed", function() editbox:ClearFocus() end)
-			editbox:SetScript("OnEnterPressed", function() editbox:ClearFocus() end)
-			editbox:SetScript("OnEditFocusLost", handlers.panel.refresh)
+			editbox:SetScript("OnEscapePressed", function() editbox:ClearFocus() end) ---@diagnostic disable-line: param-type-mismatch
+			editbox:SetScript("OnEnterPressed", function() editbox:ClearFocus() end) ---@diagnostic disable-line: param-type-mismatch
+			editbox:SetScript("OnEditFocusLost", handlers.panel.refresh) ---@diagnostic disable-line: param-type-mismatch
 
 			editbox:SetScript("OnEnter", function() if editbox.tooltipText then GameTooltip:SetOwner(editbox, "ANCHOR_RIGHT") GameTooltip:SetText(editbox.tooltipText, nil, nil, nil, nil, true) GameTooltip:Show() end end)
 			editbox:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1291,11 +1321,11 @@ local Init do
 
 				local PANEL_SCROLL_HEIGHT = 0 -- TODO: dynamic max?
 
-				panel.scroll = CreateFrame("ScrollFrame", nil, panel)
+				panel.scroll = CreateFrame("ScrollFrame", nil, panel) ---@class FriendsListColorsInterfaceOptionsPanelScroll : ScrollFrame
 				panel.scroll:SetPoint("TOPLEFT", 10, -10)
 				panel.scroll:SetPoint("BOTTOMRIGHT", -26, 10)
 
-				panel.scroll.bar = CreateFrame("Slider", nil, panel.scroll, "UIPanelScrollBarTemplate")
+				panel.scroll.bar = CreateFrame("Slider", nil, panel.scroll, "UIPanelScrollBarTemplate") ---@class FriendsListColorsInterfaceOptionsPanelScrollBar : Slider
 				panel.scroll.bar.scrollStep = 50
 				panel.scroll.bar:SetPoint("TOPLEFT", panel, "TOPRIGHT", -22, -26)
 				panel.scroll.bar:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", 22, 26)
@@ -1350,10 +1380,10 @@ local Init do
 								option.widget = last
 								last.option = option
 								last.refresh = handlers.option.text.update
-								last:HookScript("OnEditFocusGained", function(self) handlers.option.text.focusGain(self) end)
-								last:HookScript("OnEditFocusLost", function(self) handlers.option.text.focusLost(self) end)
-								last:HookScript("OnEscapePressed", function(self) handlers.option.text.focusLost(self, true) end)
-								last:SetScript("OnEnterPressed", function(self, ...) handlers.option.text.save(self, ...) self:ClearFocus() end)
+								last:HookScript("OnEditFocusGained", function(self) handlers.option.text.focusGain(self) end) ---@diagnostic disable-line: param-type-mismatch
+								last:HookScript("OnEditFocusLost", function(self) handlers.option.text.focusLost(self) end) ---@diagnostic disable-line: param-type-mismatch
+								last:HookScript("OnEscapePressed", function(self) handlers.option.text.focusLost(self, true) end) ---@diagnostic disable-line: param-type-mismatch
+								last:SetScript("OnEnterPressed", function(self) handlers.option.text.save(self) self:ClearFocus() end) ---@diagnostic disable-line: param-type-mismatch
 								last:SetScale(1.5)
 								table.insert(panel.widgets, last)
 
@@ -1402,7 +1432,7 @@ local Frame do
 
 	---@class AddOnFrame : Frame
 
-	Frame = CreateFrame("Frame") ---@type AddOnFrame
+	Frame = CreateFrame("Frame") ---@class AddOnFrame
 	Frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
 
 	local loaded = false

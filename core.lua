@@ -1416,7 +1416,9 @@ local Init do
 		end
 
 		ui = CreatePanel()
-		InterfaceOptions_AddCategory(ui)
+		local category = Settings.RegisterCanvasLayoutCategory(ui, ui.name, ui.name)
+		category.ID = ui.name
+		Settings.RegisterAddOnCategory(category)
 
 	end
 

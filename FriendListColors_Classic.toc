@@ -1,4 +1,4 @@
-﻿﻿## Interface: 50501
+﻿## Interface: 50501
 ## IconAtlas: socialqueuing-icon-group
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!

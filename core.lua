@@ -1536,6 +1536,42 @@ local Init do
 
 end
 
+-- Global Access Point
+_G.FriendListColors = _G.FriendListColors or {}
+
+---@param data table Key-value pairs for the friend (name, level, class, etc.)
+---@param formatString? string Optional override for the format string
+---@return string The formatted text
+function _G.FriendListColors.Format(data, formatString)
+	if not data then return "" end
+
+	-- Determine default format if not provided
+	if not formatString then
+		-- Access Config within closure or via Global DB if Config is local
+		local db = _G[addonName .. "DB"]
+		formatString = db and db.format or ""
+	end
+
+	-- Construct the wrapper expected by Parse.Format
+	-- Map 'isBNet' boolean to your internal types if necessary
+	local buttonType = data.isBNet and FRIENDS_BUTTON_TYPE_BNET or FRIENDS_BUTTON_TYPE_WOW
+
+	-- Apply aliases to ensure keys like 'class' (from className) and 'timerunnerIcon' are populated
+	-- This makes the external API behave consistently with internal logic
+	if Friends and Friends.AddFieldAlias then
+		Friends.AddFieldAlias(data, data.isBNet)
+	end
+
+	---@type FriendWrapper
+	local friendWrapper = {
+		type = buttonType,
+		data = data
+	}
+
+	-- Call your internal parser
+	return Parse.Format(friendWrapper, formatString)
+end
+
 local Frame do
 
 	---@class AddOnFrame : Frame

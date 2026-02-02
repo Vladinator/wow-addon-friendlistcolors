@@ -1580,9 +1580,9 @@ do
 	---@return string? text Formatted result string. If nil, then the input `data` or `formatString` was missing.
 	--- ```
 	--- -- Examples:
-	--- FriendListColors.Format(C_BattleNet.GetAccountInfoByGUID("GUID"), "[=name]") -- BNetInfo
-	--- FriendListColors.Format(C_BattleNet.GetFriendGameAccountInfo(1, 1), "[=name]") -- BNetAccountInfo
-	--- FriendListColors.Format(C_FriendList.GetFriendInfo("Name"), "[=name]") -- FriendList
+	--- FriendListColorsAPI.Format(C_BattleNet.GetAccountInfoByGUID("GUID"), "[=name]") -- BNetInfo
+	--- FriendListColorsAPI.Format(C_BattleNet.GetFriendGameAccountInfo(1, 1), "[=name]") -- BNetAccountInfo
+	--- FriendListColorsAPI.Format(C_FriendList.GetFriendInfo("Name"), "[=name]") -- FriendList
 	--- ```
 	function FriendListColorsAPI.Format(data, format)
 		if not data or type(data) ~= "table" then

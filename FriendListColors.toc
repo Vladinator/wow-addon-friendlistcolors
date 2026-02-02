@@ -3,7 +3,7 @@
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 12.0.0.260125
+## Version: 12.0.0.260202
 ## SavedVariables: FriendListColorsDB
 ## X-Curse-Project-ID: 43444
 ## X-WoWI-ID: 18256

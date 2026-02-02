@@ -9,12 +9,14 @@ local TIMERUNNING_MARKUP = CreateAtlasMarkup and CreateAtlasMarkup("timerunning-
 
 ---@alias ChatTypeExtended ChatType|"BN_WHISPER"
 
+---@alias FriendListColorsFriendInfo BNetAccountInfoExtended|BNetGameAccountInfo|BNetAccountInfo|FriendInfo
+
 ---@class ColorNS
 local Color do
 
 	Color = {}
 
-	---@param r number|ColorMixin
+	---@param r number|colorRGB
 	---@param g? number
 	---@param b? number
 	function Color.From(r, g, b)
@@ -36,7 +38,7 @@ local Color do
 
 		cache = {}
 
-		local colors = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS ---@type table<string, ColorMixin>
+		local colors = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS ---@type table<string, colorRGB>
 
 		for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
 			cache[v] = Color.From(colors[k])
@@ -466,7 +468,7 @@ local Friends do
 		return data
 	end
 
-	---@param data BNetAccountInfoExtended|BNetAccountInfo|FriendInfo
+	---@param data FriendListColorsFriendInfo
 	---@param isBNet? boolean
 	function Friends.AddFieldAlias(data, isBNet)
 		---@param ... FriendKey
@@ -504,7 +506,7 @@ local Friends do
 
 	---@class FriendWrapper
 	---@field public type FriendType
-	---@field public data? BNetAccountInfoExtended|BNetAccountInfo|FriendInfo
+	---@field public data? FriendListColorsFriendInfo
 
 	---@param buttonType FriendType
 	---@param id number
@@ -1567,3 +1569,36 @@ local Frame do
 end
 
 Frame:Init()
+
+-- Public `FriendListColorsAPI`
+do
+
+	FriendListColorsAPI = setmetatable({}, { __metatable = false })
+
+	---@param data? FriendListColorsFriendInfo Friend data from BNet or FriendList systems. A Table KV-pair such as name, level, class, etc.
+	---@param format? string Optional format string to override the user preference from FriendListColors DB.
+	---@return string? text Formatted result string. If nil, then the input `data` or `formatString` was missing.
+	--- ```
+	--- -- Examples:
+	--- FriendListColors.Format(C_BattleNet.GetAccountInfoByGUID("GUID"), "[=name]") -- BNetInfo
+	--- FriendListColors.Format(C_BattleNet.GetFriendGameAccountInfo(1, 1), "[=name]") -- BNetAccountInfo
+	--- FriendListColors.Format(C_FriendList.GetFriendInfo("Name"), "[=name]") -- FriendList
+	--- ```
+	function FriendListColorsAPI.Format(data, format)
+		if not data or type(data) ~= "table" then
+			return ""
+		end
+		if not format or type(format) ~= "string" then
+			format = Config and Config.format
+			if not format then
+				return ""
+			end
+		end
+		local buttonType = data.isBNet and FRIENDS_BUTTON_TYPE_BNET or FRIENDS_BUTTON_TYPE_WOW
+		Friends.AddFieldAlias(data, data.isBNet)
+		---@type FriendWrapper
+		local friendWrapper = { type = buttonType, data = data }
+		return Parse.Format(friendWrapper, format)
+	end
+
+end

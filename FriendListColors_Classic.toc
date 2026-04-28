@@ -1,9 +1,9 @@
-﻿## Interface: 50501
+﻿## Interface: 50503
 ## IconAtlas: socialqueuing-icon-group
 ## Title: FriendListColors
 ## Notes: Customize how your friends appear in your friends list!
 ## Author: Vladinator
-## Version: 5.5.1.260202
+## Version: 5.5.3.260428
 ## SavedVariables: FriendListColorsDB
 ## X-Curse-Project-ID: 43444
 ## X-WoWI-ID: 18256

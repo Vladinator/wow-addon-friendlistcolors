@@ -2,6 +2,7 @@ local InterfaceOptionsFramePanelContainer = InterfaceOptionsFramePanelContainer 
 local ReloadUI = ReloadUI or C_UI.Reload ---@type fun()
 local FRIENDS_BUTTON_TYPE_BNET = FRIENDS_BUTTON_TYPE_BNET ---@type 2
 local FRIENDS_BUTTON_TYPE_WOW = FRIENDS_BUTTON_TYPE_WOW ---@type 3
+local issecretvalue = issecretvalue or function() end ---@type fun(value: unknown): boolean?
 
 local addonName = ... ---@type string
 
@@ -917,6 +918,9 @@ local Init do
 			---@param self Button
 			---@param text string
 			local function ToastSetTextHook(self, text)
+				if issecretvalue(text) then
+					return
+				end
 				if isToastSettingText or not text or text == "" then
 					return
 				end

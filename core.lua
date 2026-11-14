@@ -682,7 +682,7 @@ local Init do
 		---@class SocialUIFriendsList : Frame
 		---@field public ScrollBox ScrollFrame | ScrollBoxPolyfill | { ForEachFrame: fun(self, callback: fun(frame: SocialCard)) }
 
-		---@type { FriendsList?: SocialUIFriendsList }?
+		---@type { FriendsList?: SocialUIFriendsList, QuickJoinFrame?: QuickJoinFrame }?
 		local socialUIFrame = SocialUIFrame
 		local socialUIFrameFriendListScrollBox = socialUIFrame and socialUIFrame.FriendsList and socialUIFrame.FriendsList.ScrollBox
 
@@ -958,22 +958,28 @@ local Init do
 			---@field public ScrollBox? ScrollFrame | ScrollBoxPolyfill
 			---@field public buttons? QuickJoinFrameButton[]
 
-			---@type QuickJoinFrame
-			local quickJoinScrollFrame = QuickJoinFrame
+			---@type (QuickJoinFrame|false)[]
+			local quickJoinScrollFrames = {
+				QuickJoinFrame or false,
+				socialUIFrame and socialUIFrame.QuickJoinFrame or false,
+			}
 
-			if quickJoinScrollFrame.ScrollBox then
-				quickJoinScrollFrame.ScrollBox:GetView():RegisterCallback(
-					ScrollBoxListMixin.Event.OnAcquiredFrame,
-					function(_, button, created)
-						if created then
-							QuickJoinHookButtons({ button })
-						end
+			for _, quickJoinScrollFrame in ipairs(quickJoinScrollFrames) do
+				if quickJoinScrollFrame then
+					if quickJoinScrollFrame.ScrollBox then
+						quickJoinScrollFrame.ScrollBox:GetView():RegisterCallback(
+							ScrollBoxListMixin.Event.OnAcquiredFrame,
+							function(_, button, created)
+								if created then
+									QuickJoinHookButtons({ button })
+								end
+							end
+						)
 					end
-				)
-			end
-
-			if quickJoinScrollFrame.buttons then
-				QuickJoinHookButtons(quickJoinScrollFrame.buttons)
+					if quickJoinScrollFrame.buttons then
+						QuickJoinHookButtons(quickJoinScrollFrame.buttons)
+					end
+				end
 			end
 
 			-- mutex lock when setting text to avoid recursion

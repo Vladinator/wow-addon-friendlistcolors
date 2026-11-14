@@ -671,6 +671,69 @@ local Init do
 			HookButtons(scrollFrame.buttons)
 		end
 
+		---@class SocialCardElementData
+		---@field public friendIndex? number
+		---@field public accountInfo? BNetAccountInfo
+
+		---@class SocialCard : Button
+		---@field public elementData? SocialCardElementData
+		---@field public FriendName? FontString
+
+		---@class SocialUIFriendsList : Frame
+		---@field public ScrollBox ScrollFrame | ScrollBoxPolyfill | { ForEachFrame: fun(self, callback: fun(frame: SocialCard)) }
+
+		---@type { FriendsList?: SocialUIFriendsList }?
+		local socialUIFrame = SocialUIFrame
+		local socialUIFrameFriendListScrollBox = socialUIFrame and socialUIFrame.FriendsList and socialUIFrame.FriendsList.ScrollBox
+
+		if socialUIFrameFriendListScrollBox then
+
+			---@param self FontString
+			local function SocialCardSetTextHook(self)
+				if isSettingText then
+					return
+				end
+				---@type SocialCard
+				---@diagnostic disable-next-line: assign-type-mismatch
+				local card = self:GetParent()
+				local elementData = card.elementData
+				local friendIndex = elementData and elementData.friendIndex
+				if not friendIndex then
+					return
+				end
+				local friendWrapper = Friends.PackageFriend(FRIENDS_BUTTON_TYPE_BNET, friendIndex)
+				if not friendWrapper then
+					return
+				end
+				local text = Parse.Format(friendWrapper, Config.format)
+				isSettingText = true
+				self:SetText(text)
+				isSettingText = false
+			end
+
+			---@type table<SocialCard, true?>
+			local hookedCards = {}
+
+			---@param card SocialCard
+			local function HookSocialCard(card)
+				if not card.FriendName or hookedCards[card] then
+					return
+				end
+				hookedCards[card] = true
+				hooksecurefunc(card.FriendName, "SetText", SocialCardSetTextHook)
+			end
+
+			socialUIFrameFriendListScrollBox:GetView():RegisterCallback(
+				ScrollBoxListMixin.Event.OnAcquiredFrame,
+				function(_, card)
+					HookSocialCard(card)
+				end
+			)
+
+			socialUIFrameFriendListScrollBox:ForEachFrame(HookSocialCard)
+
+		end
+
 		if ChatEdit_UpdateHeader then
 
 			---@param editBox EditBox

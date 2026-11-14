@@ -39,6 +39,7 @@
         "ReloadUI",
         "ScrollBoxListMixin",
         "Settings",
-        "SettingsPanel"
+        "SettingsPanel",
+        "SocialUIFrame"
     ]
 }

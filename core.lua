@@ -17,18 +17,19 @@ local Color do
 
 	Color = {}
 
-	---@param r number|colorRGB
+	---@param r? number|colorRGB
 	---@param g? number
 	---@param b? number
+	---@overload fun(color: colorRGB): string
 	function Color.From(r, g, b)
 		if type(r) == "table" then
-			if r.r then
-				r, g, b = r.r, r.g, r.b ---@diagnostic disable-line: undefined-field
+			if r.r and r.g and r.b then
+				b, g, r = r.b, r.g, r.r
 			else
 				r, g, b = unpack(r)
 			end
 		end
-		if not r then
+		if not r or not g or not b then
 			return "ffffff"
 		end
 		return format("%02X%02X%02X", floor(r * 255), floor(g * 255), floor(b * 255))
@@ -169,11 +170,11 @@ local Parse do
 	---@param field string
 	function Parse.Color(friendWrapper, field)
 
-		---@type string|number|boolean|nil
+		---@type string|number|boolean?
 		local out
 
-		---@type string|number|boolean|nil
-		local value = friendWrapper.data[field]
+		---@type string|number|boolean?
+		local value = friendWrapper.data and friendWrapper.data[field]
 
 		if field == "level" or field == "characterLevel" then
 			out = Color.ForLevel(value)
@@ -183,7 +184,7 @@ local Parse do
 
 		if not out then
 			local r, g, b = field:match("^%s*(%d+)%s*,%s*(%d+)%s*,%s*(%d+)%s*$") ---@type string?, string?, string?
-			if r then
+			if r and g and b then
 				out = Color.From(r/255, g/255, b/255)
 			else
 				local hex = field:match("^%s*([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])%s*$") ---@type string?
@@ -194,7 +195,7 @@ local Parse do
 		end
 
 		if not out then
-			local offline = not friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "isOnline" or "connected"]
+			local offline = friendWrapper.data and not friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "isOnline" or "connected"]
 			if offline then
 				out = Color.Gray
 			elseif friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET then
@@ -218,7 +219,7 @@ local Parse do
 	---@param reverseLogic? boolean
 	function Parse.Logic(friendWrapper, text, content, reverseLogic)
 
-		---@type string|number|boolean|nil
+		---@type string|number|boolean?
 		local out
 
 		---@type string[]
@@ -231,13 +232,13 @@ local Parse do
 		for i = 1, #fields do
 
 			local field = fields[i]
-			local value = friendWrapper.data[field] ---@type string|number|boolean|nil
+			local value = friendWrapper.data and friendWrapper.data[field] ---@type string|number|boolean?
 
 			if value ~= nil then
 
 				if field == "accountName" or field == "name" then
 
-					local note = friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "note" or "notes"] ---@type string?
+					local note = friendWrapper.data and friendWrapper.data[friendWrapper.type == FRIENDS_BUTTON_TYPE_BNET and "note" or "notes"] ---@type string?
 					local alias = Parse.Note(note)
 
 					if alias then
@@ -675,7 +676,7 @@ local Init do
 			---@param editBox EditBox
 			local function ChatEdit_UpdateHeader(editBox)
 
-				local chatType = editBox:GetAttribute("chatType") ---@type ChatType
+				local chatType = editBox:GetAttribute("chatType") ---@type ChatType|"BN_WHISPER"
 				if chatType ~= "WHISPER" and chatType ~= "BN_WHISPER" then
 					return
 				end
@@ -1013,7 +1014,9 @@ local Init do
 				friendWrapper.type = FRIENDS_BUTTON_TYPE_WOW
 				friendWrapper.data = data
 			end
-			Friends.AddFieldAlias(friendWrapper.data, isBNet)
+			if friendWrapper.data then
+				Friends.AddFieldAlias(friendWrapper.data, isBNet)
+			end
 			return Parse.Format(friendWrapper, format)
 		end
 
@@ -1192,11 +1195,17 @@ local Init do
 						self:SetText(temp)
 					end,
 					focusGain = function(self)
-						optionGroups[1].options[4].widget:SetText("\r\n|cffFFFF00Remember to press Enter to save your changes!|r")
+						local widget = optionGroups[1].options[4].widget
+						if widget then
+							widget:SetText("\r\n|cffFFFF00Remember to press Enter to save your changes!|r")
+						end
 						self.backup = Config.format
 					end,
 					focusLost = function(self, cancel)
-						optionGroups[1].options[4].widget:SetText("")
+						local widget = optionGroups[1].options[4].widget
+						if widget then
+							widget:SetText("")
+						end
 						if not cancel then return end
 						Config.format = self.backup
 						handlers.option.text.update(optionGroups[1].options[1].widget)
@@ -1374,7 +1383,7 @@ local Init do
 			editbox:SetScript("OnEnterPressed", function() editbox:ClearFocus() end)
 			editbox:SetScript("OnEditFocusLost", handlers.panel.refresh)
 
-			editbox:SetScript("OnEnter", function() if editbox.tooltipText then GameTooltip:SetOwner(editbox, "ANCHOR_RIGHT") GameTooltip:SetText(editbox.tooltipText, nil, nil, nil, nil, true) GameTooltip:Show() end end)
+			editbox:SetScript("OnEnter", function() if editbox.tooltipText then GameTooltip:SetOwner(editbox, "ANCHOR_RIGHT") GameTooltip:SetText(editbox.tooltipText, 1, 1, 1, 1, true) GameTooltip:Show() end end)
 			editbox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
 			if anchor:GetObjectType() == "Frame" then
